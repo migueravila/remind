@@ -13,7 +13,7 @@ test:
 
 format:
 	@if command -v swift-format >/dev/null 2>&1; then \
-		swift-format -i -r Sources/; \
+		swift-format --configuration .format -i -r Sources/; \
 		echo "Code formatted"; \
 	else \
 		echo "swift-format not found. Install with: brew install swift-format"; \
