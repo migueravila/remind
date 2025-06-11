@@ -25,9 +25,12 @@ class ReminderService {
             let reminderCount = await getRemindersCount(for: calendar)
             lists.append(
                 ReminderList(
-                    id: calendar.calendarIdentifier, title: calendar.title,
+                    id: calendar.calendarIdentifier, 
+                    title: calendar.title,
                     color: calendar.cgColor?.components?.description,
-                    reminderCount: reminderCount))
+                    reminderCount: reminderCount
+                )
+            )
         }
 
         return lists
@@ -41,13 +44,46 @@ class ReminderService {
         try eventStore.saveCalendar(calendar, commit: true)
 
         return ReminderList(
-            id: calendar.calendarIdentifier, title: calendar.title,
-            reminderCount: 0)
+            id: calendar.calendarIdentifier, 
+            title: calendar.title,
+            reminderCount: 0
+        )
+    }
+    
+    func deleteList(name: String) async throws {
+        let calendars = eventStore.calendars(for: .reminder).filter {
+            $0.title == name
+        }
+        
+        guard let calendar = calendars.first else {
+            throw RemindError.listNotFound
+        }
+        
+        guard calendar.allowsContentModifications else {
+            throw RemindError.operationFailed("Cannot delete system calendar")
+        }
+        
+        try eventStore.removeCalendar(calendar, commit: true)
+    }
+    
+    func renameList(oldName: String, newName: String) async throws {
+        let calendars = eventStore.calendars(for: .reminder).filter {
+            $0.title == oldName
+        }
+        
+        guard let calendar = calendars.first else {
+            throw RemindError.listNotFound
+        }
+        
+        guard calendar.allowsContentModifications else {
+            throw RemindError.operationFailed("Cannot modify system calendar")
+        }
+        
+        calendar.title = newName
+        try eventStore.saveCalendar(calendar, commit: true)
     }
 
-    func getReminders(
-        from listName: String? = nil
-    ) async throws -> [ReminderItem] {
+    func getReminders(from listName: String? = nil) async throws -> [ReminderItem] {
         let calendars: [EKCalendar]
 
         if let listName = listName {
@@ -66,12 +102,13 @@ class ReminderService {
                 let reminders = (ekReminders ?? []).map { ekReminder in
                     ReminderItem(
                         id: ekReminder.calendarItemIdentifier,
-                        title: ekReminder.title ?? "", notes: ekReminder.notes,
+                        title: ekReminder.title ?? "", 
+                        notes: ekReminder.notes,
                         isCompleted: ekReminder.isCompleted,
-                        priority: ReminderItem.Priority(
-                            rawValue: ekReminder.priority) ?? .none,
+                        priority: ReminderItem.Priority(rawValue: ekReminder.priority) ?? .none,
                         dueDate: ekReminder.dueDateComponents?.date,
-                        listName: ekReminder.calendar.title)
+                        listName: ekReminder.calendar.title
+                    )
                 }
                 continuation.resume(returning: reminders)
             }
@@ -82,27 +119,22 @@ class ReminderService {
         let allReminders = try await getReminders(from: nil)
         let calendar = Calendar.current
         let now = Date()
+        
         switch filter {
         case .today:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && (reminder.dueDate.map { calendar.isDateInToday($0) }
-                        ?? false
-                        || reminder.dueDate.map {
-                            $0 < calendar.startOfDay(for: now)
-                        } ?? false)
+                    && (reminder.dueDate.map { calendar.isDateInToday($0) } ?? false
+                        || reminder.dueDate.map { $0 < calendar.startOfDay(for: now) } ?? false)
             }
         case .tomorrow:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map { calendar.isDateInTomorrow($0) }
-                        ?? false
+                    && reminder.dueDate.map { calendar.isDateInTomorrow($0) } ?? false
             }
         case .thisWeek:
-            let startOfWeek =
-                calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
-            let endOfWeek =
-                calendar.dateInterval(of: .weekOfYear, for: now)?.end ?? now
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
+            let endOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?.end ?? now
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate.map { dueDate in
@@ -112,9 +144,7 @@ class ReminderService {
         case .overdue:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map {
-                        $0 < calendar.startOfDay(for: now)
-                    } ?? false
+                    && reminder.dueDate.map { $0 < calendar.startOfDay(for: now) } ?? false
             }
         case .flagged:
             return allReminders.filter { reminder in
@@ -123,31 +153,24 @@ class ReminderService {
         case .upcoming:
             return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }
                 .sorted {
-                    ($0.dueDate ?? Date.distantFuture)
-                        < ($1.dueDate ?? Date.distantFuture)
+                    ($0.dueDate ?? Date.distantFuture) < ($1.dueDate ?? Date.distantFuture)
                 }
         case .inbox:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && (reminder.listName == nil
-                        || reminder.listName?.lowercased().contains("inbox")
-                            == true
-                        || reminder.listName?.lowercased().contains("reminders")
-                            == true)
+                        || reminder.listName?.lowercased().contains("inbox") == true
+                        || reminder.listName?.lowercased().contains("reminders") == true)
             }
         case .specificDate(let date):
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map {
-                        calendar.isDate($0, inSameDayAs: date)
-                    } ?? false
+                    && reminder.dueDate.map { calendar.isDate($0, inSameDayAs: date) } ?? false
             }
         }
     }
 
-    func createReminder(
-        _ reminder: ReminderItem, in listName: String
-    ) async throws {
+    func createReminder(_ reminder: ReminderItem, in listName: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == listName
         }
@@ -178,3 +201,4 @@ class ReminderService {
         }
     }
 }
+
