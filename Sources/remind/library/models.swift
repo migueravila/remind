@@ -32,7 +32,10 @@ struct ReminderList {
     let color: String?
     let reminderCount: Int
 
-    init(id: String? = nil, title: String, color: String? = nil, reminderCount: Int = 0) {
+    init(
+        id: String? = nil, title: String, color: String? = nil,
+        reminderCount: Int = 0
+    ) {
         self.id = id
         self.title = title
         self.color = color
@@ -57,7 +60,19 @@ enum RemindError: LocalizedError {
         case .reminderNotFound: return "Reminder not found"
         case .listNotFound: return "List not found"
         case .invalidDate: return "Invalid date format"
-        case .operationFailed(let message): return "Operation failed: \(message)"
+        case .operationFailed(let message):
+            return "Operation failed: \(message)"
         }
     }
+}
+
+enum TimeFilter {
+    case today
+    case tomorrow
+    case thisWeek
+    case overdue
+    case flagged
+    case upcoming
+    case inbox
+    case specificDate(Date)
 }

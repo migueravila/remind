@@ -8,20 +8,20 @@ struct ListCommand: AsyncParsableCommand {
 }
 
 struct ShowListsCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "show", abstract: "Show all reminder lists")
+    static let configuration = CommandConfiguration(
+        commandName: "show", abstract: "Show all reminder lists")
 
     func run() async throws {
         let cli = RemindCLI()
         try await cli.initialize()
         let lists = try await cli.getAllLists()
-
-        OutputUtils.printTable(
-            lists, headers: ["List Name", "Reminders"], valueExtractor: { [$0.title, "\($0.reminderCount)"] })
+        OutputUtils.printLists(lists)
     }
 }
 
 struct CreateListCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "create", abstract: "Create a new reminder list")
+    static let configuration = CommandConfiguration(
+        commandName: "create", abstract: "Create a new reminder list")
 
     @Argument(help: "Name of the new list") var name: String
 
