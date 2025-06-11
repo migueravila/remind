@@ -87,7 +87,10 @@ class ReminderService {
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && (reminder.dueDate.map { calendar.isDateInToday($0) }
-                        ?? false || reminder.dueDate == nil)
+                        ?? false
+                        || reminder.dueDate.map {
+                            $0 < calendar.startOfDay(for: now)
+                        } ?? false)
             }
         case .tomorrow:
             return allReminders.filter { reminder in
