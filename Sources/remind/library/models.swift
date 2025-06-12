@@ -73,6 +73,5 @@ enum TimeFilter {
     case overdue
     case flagged
     case upcoming
-    case inbox
     case specificDate(Date)
 }

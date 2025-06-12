@@ -151,15 +151,6 @@ class ReminderService {
                     ($0.dueDate ?? Date.distantFuture)
                         < ($1.dueDate ?? Date.distantFuture)
                 }
-        case .inbox:
-            return allReminders.filter { reminder in
-                !reminder.isCompleted
-                    && (reminder.listName == nil
-                        || reminder.listName?.lowercased().contains("inbox")
-                            == true
-                        || reminder.listName?.lowercased().contains("reminders")
-                            == true)
-            }
         case .specificDate(let date):
             return allReminders.filter { reminder in
                 !reminder.isCompleted
