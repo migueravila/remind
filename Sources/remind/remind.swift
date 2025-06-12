@@ -6,5 +6,7 @@ import ArgumentParser
         abstract: "A CLI tool for managing Apple Reminders", version: "1.0.0",
         subcommands: [
             ShowCommand.self, ListCommand.self, ShowListsCommand.self,
+            AddReminderCommand.self, CompleteReminderCommand.self,
+            DeleteReminderCommand.self,
         ], defaultSubcommand: ShowCommand.self)
 }

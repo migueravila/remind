@@ -37,8 +37,7 @@ struct OutputUtils {
         }
 
         let maxTitleLength = reminders.map { $0.title.count }.max() ?? 0
-
-        for reminder in reminders.sorted(by: { reminder1, reminder2 in
+        let sortedReminders = reminders.sorted(by: { reminder1, reminder2 in
             if reminder1.isCompleted != reminder2.isCompleted {
                 return !reminder1.isCompleted && reminder2.isCompleted
             }
@@ -52,15 +51,25 @@ struct OutputUtils {
                 return false
             }
             return reminder1.priority.rawValue > reminder2.priority.rawValue
-        }) { printReminder(reminder, maxTitleLength: maxTitleLength) }
+        })
+        for (index, reminder) in sortedReminders.enumerated() {
+            printReminder(
+                reminder, maxTitleLength: maxTitleLength, index: index + 1)
+        }
     }
 
     private static func printReminder(
-        _ reminder: ReminderItem, maxTitleLength: Int
+        _ reminder: ReminderItem, maxTitleLength: Int, index: Int
     ) {
         let paddedTitle = reminder.title.padding(
             toLength: maxTitleLength, withPad: " ", startingAt: 0)
         var info: [String] = []
+        if let id = reminder.id {
+            let shortId = String(id.prefix(4))
+            info.append("[\(index)] \(shortId)")
+        } else {
+            info.append("[\(index)]")
+        }
         if let dueDate = reminder.dueDate {
             let dateText = formatDateForDisplay(dueDate)
             info.append(dateText)
@@ -83,6 +92,7 @@ struct OutputUtils {
         }
         print("\(paddedTitle)  \(bullet) \(info.joined(separator: " "))")
     }
+
     private static func formatDateForDisplay(_ date: Date) -> String {
         let calendar = Calendar.current
         let now = Date()
@@ -112,6 +122,67 @@ struct OutputUtils {
     static func printError(_ message: String) { print("\(dash) \(message)") }
     static func printInfo(_ message: String) { print("\(bullet) \(message)") }
     static func printWarning(_ message: String) { print("\(star) \(message)") }
+}
+
+struct IDResolver {
+    static func resolveIDs(
+        _ inputs: [String], from reminders: [ReminderItem]
+    ) -> [String] {
+        var resolvedIDs: [String] = []
+        for input in inputs {
+            if let id = resolveID(input, from: reminders) {
+                resolvedIDs.append(id)
+            }
+        }
+        return resolvedIDs
+    }
+    private static func resolveID(
+        _ input: String, from reminders: [ReminderItem]
+    ) -> String? {
+        if let index = Int(input), index > 0, index <= reminders.count {
+            let sortedReminders = sortReminders(reminders)
+            return sortedReminders[index - 1].id
+        }
+        if let reminder = reminders.first(where: { $0.id == input }) {
+            return reminder.id
+        }
+        if input.count >= 3 {
+            let matches = reminders.filter { reminder in
+                reminder.id?.lowercased().hasPrefix(input.lowercased()) ?? false
+            }
+            if matches.count == 1 {
+                return matches.first?.id
+            } else if matches.count > 1 {
+                print("Ambiguous ID '\(input)' matches multiple reminders:")
+                for match in matches.prefix(5) {
+                    print(
+                        "  - \(match.id?.prefix(8) ?? "Unknown"): \(match.title)"
+                    )
+                }
+                return nil
+            }
+        }
+        return nil
+    }
+    private static func sortReminders(
+        _ reminders: [ReminderItem]
+    ) -> [ReminderItem] {
+        return reminders.sorted(by: { reminder1, reminder2 in
+            if reminder1.isCompleted != reminder2.isCompleted {
+                return !reminder1.isCompleted && reminder2.isCompleted
+            }
+            if let date1 = reminder1.dueDate, let date2 = reminder2.dueDate {
+                return date1 < date2
+            }
+            if reminder1.dueDate != nil && reminder2.dueDate == nil {
+                return true
+            }
+            if reminder1.dueDate == nil && reminder2.dueDate != nil {
+                return false
+            }
+            return reminder1.priority.rawValue > reminder2.priority.rawValue
+        })
+    }
 }
 
 struct InputUtils {
@@ -211,6 +282,23 @@ struct DateUtils {
         dateComponents.month = month
         dateComponents.year = fullYear
         return Calendar.current.date(from: dateComponents)
+    }
+
+    static func parseNaturalDate(_ input: String) -> Date? {
+        let lowercased = input.lowercased().trimmingCharacters(
+            in: .whitespacesAndNewlines)
+        let calendar = Calendar.current
+        let now = Date()
+        switch lowercased {
+        case "today": return calendar.startOfDay(for: now)
+        case "tomorrow":
+            return calendar.date(
+                byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+        case "yesterday":
+            return calendar.date(
+                byAdding: .day, value: -1, to: calendar.startOfDay(for: now))
+        default: return parseDate(input)
+        }
     }
 
     static func formatDate(_ date: Date) -> String {

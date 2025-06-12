@@ -19,6 +19,18 @@ class RemindCLI {
         try await reminderService.renameList(oldName: oldName, newName: newName)
     }
 
+    func completeReminders(ids: [String]) async throws {
+        try await reminderService.completeReminders(ids: ids)
+    }
+
+    func deleteReminders(ids: [String]) async throws {
+        try await reminderService.deleteReminders(ids: ids)
+    }
+
+    func findReminderById(_ id: String) async throws -> ReminderItem? {
+        return try await reminderService.findReminderById(id)
+    }
+
     func getReminders(
         from listName: String? = nil
     ) async throws -> [ReminderItem] {
