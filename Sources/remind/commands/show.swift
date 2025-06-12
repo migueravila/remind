@@ -8,7 +8,7 @@ struct ShowCommand: AsyncParsableCommand {
     @Argument(
         parsing: .remaining,
         help:
-            "Time filter (today, tomorrow, week, overdue, upcoming, inbox, flag, or DD-MM-YY)"
+            "Time filter (today, tomorrow, week, overdue, upcoming, flag, or DD-MM-YY)"
     ) var timeFilter: [String] = []
     func run() async throws {
         let cli = RemindCLI()
@@ -22,7 +22,6 @@ struct ShowCommand: AsyncParsableCommand {
         guard let firstArg = args.first else { return .today }
         let arg = firstArg.lowercased()
         switch arg {
-        case "inbox": return .inbox
         case "tomorrow", "t": return .tomorrow
         case "week", "w": return .thisWeek
         case "overdue", "o": return .overdue
@@ -43,7 +42,6 @@ struct ShowCommand: AsyncParsableCommand {
         case .overdue: return "Overdue Tasks"
         case .flagged: return "Flagged Tasks"
         case .upcoming: return "Upcoming Tasks"
-        case .inbox: return "Inbox Tasks"
         case .specificDate(let date):
             return "Tasks for \(DateUtils.formatDate(date))"
         }
