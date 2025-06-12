@@ -47,4 +47,3 @@ struct ShowCommand: AsyncParsableCommand {
         }
     }
 }
-

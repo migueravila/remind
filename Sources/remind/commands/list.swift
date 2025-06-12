@@ -50,7 +50,8 @@ struct ListCommand: AsyncParsableCommand {
 
 struct ShowListsCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lists", abstract: "Show all reminder lists")
+        commandName: "lists", abstract: "Show all reminder lists",
+        aliases: ["l"])
 
     func run() async throws {
         let cli = RemindCLI()

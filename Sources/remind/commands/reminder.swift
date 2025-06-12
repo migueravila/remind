@@ -227,7 +227,6 @@ struct AddReminderCommand: AsyncParsableCommand {
     }
 }
 
-
 struct CompleteReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "complete", abstract: "Complete one or more reminders",
