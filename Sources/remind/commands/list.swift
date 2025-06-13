@@ -3,7 +3,8 @@ import Foundation
 
 struct ListCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "list", abstract: "Manage reminder lists"
+        commandName: "list",
+        abstract: "Manage reminder lists",
     )
 
     @Argument(help: "List name") var name: String?
@@ -64,7 +65,8 @@ struct ListCommand: AsyncParsableCommand {
 
 struct ShowListsCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lists", abstract: "Show all reminder lists",
+        commandName: "lists",
+        abstract: "Show all reminder lists",
         aliases: ["l"]
     )
 

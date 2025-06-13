@@ -3,18 +3,22 @@ import Foundation
 
 struct AddReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "add", abstract: "Add a new reminder", aliases: ["a"]
+        commandName: "add",
+        abstract: "Add a new reminder",
+        aliases: ["a"]
     )
 
-    @Argument(
-        parsing: .remaining,
-        help: "Reminder description"
-    ) var description: [String] = []
-    @Option(name: .shortAndLong, help: "List name") var list: String?
+    @Argument(parsing: .remaining, help: "Reminder description")
+    var description: [String] = []
+
+    @Option(name: .shortAndLong, help: "List name")
+    var list: String?
+
     @Option(
         name: .shortAndLong,
         help: "Due date (YYYY-MM-DD, 'today', 'tomorrow', etc.)"
-    ) var due: String?
+    )
+    var due: String?
 
     func run() async throws {
         let manager = Manager()
@@ -80,14 +84,16 @@ struct AddReminderCommand: AsyncParsableCommand {
 
 struct CompleteReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "complete", abstract: "Complete one or more reminders",
+        commandName: "complete",
+        abstract: "Mark one or more reminders as complete",
         aliases: ["c"]
     )
 
     @Argument(
         parsing: .remaining,
         help: "Reminder number(s) or ID(s) to complete"
-    ) var inputs: [String]
+    )
+    var inputs: [String]
 
     func run() async throws {
         guard !inputs.isEmpty else {
@@ -132,14 +138,16 @@ struct CompleteReminderCommand: AsyncParsableCommand {
 
 struct DeleteReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "delete", abstract: "Delete one or more reminders",
+        commandName: "delete",
+        abstract: "Delete one or more reminders",
         aliases: ["d"]
     )
 
     @Argument(
         parsing: .remaining,
         help: "Reminder number(s) or ID(s) to delete"
-    ) var inputs: [String]
+    )
+    var inputs: [String]
 
     func run() async throws {
         guard !inputs.isEmpty else {

@@ -3,7 +3,8 @@ import Foundation
 
 struct ShowCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "show", abstract: "Show reminders based on time filters"
+        commandName: "show",
+        abstract: "Show reminders based on time filters",
     )
 
     @Argument(
