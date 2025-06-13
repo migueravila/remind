@@ -3,26 +3,29 @@ import Foundation
 
 struct ShowCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "show", abstract: "Show reminders based on time filters",
-        shouldDisplay: false
+        commandName: "show",
+        abstract: "Show reminders based on time filters",
     )
+
     @Argument(
         parsing: .remaining,
-        help:
-        "Time filter (today, tomorrow, week, overdue, upcoming, flag, or DD-MM-YY)"
-    ) var timeFilter: [String] = []
+        help: "Time filter (today, tomorrow, week, overdue, upcoming, flag, or DD-MM-YY)"
+    )
+    var timeFilter: [String] = []
+
     func run() async throws {
-        let cli = RemindCLI()
-        try await cli.initialize()
+        let manager = Manager()
+        try await manager.requestAccess()
         let filter = parseTimeFilter(timeFilter)
-        let reminders = try await cli.getReminders(filter: filter)
+        let reminders = try await manager.getReminders(filter: filter)
         let title = getTitleForFilter(filter)
         OutputUtils.printReminders(reminders, title: title)
     }
 
-    private func parseTimeFilter(_ args: [String]) -> TimeFilter {
+    private func parseTimeFilter(_ args: [String]) -> ShowOptions {
         guard let firstArg = args.first else { return .today }
         let arg = firstArg.lowercased()
+
         switch arg {
         case "tomorrow", "t": return .tomorrow
         case "week", "w": return .thisWeek
@@ -37,7 +40,7 @@ struct ShowCommand: AsyncParsableCommand {
         }
     }
 
-    private func getTitleForFilter(_ filter: TimeFilter) -> String {
+    private func getTitleForFilter(_ filter: ShowOptions) -> String {
         switch filter {
         case .today: return "Today's Tasks"
         case .tomorrow: return "Tomorrow's Tasks"

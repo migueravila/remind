@@ -1,6 +1,6 @@
 import Foundation
 
-struct ReminderItem {
+struct Reminder {
     let id: String?
     let title: String
     let notes: String?
@@ -43,7 +43,7 @@ struct ReminderList {
     }
 }
 
-enum RemindError: LocalizedError {
+enum ProgramError: LocalizedError {
     case accessDenied
     case unknownAuthorizationStatus
     case reminderNotFound
@@ -54,8 +54,7 @@ enum RemindError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return
-                "Access to Reminders denied. Please grant access in System Preferences > Privacy & Security > Reminders"
+            return "Access to Reminders denied. Please grant access in System Preferences > Privacy & Security > Reminders"
         case .unknownAuthorizationStatus: return "Unknown authorization status"
         case .reminderNotFound: return "Reminder not found"
         case .listNotFound: return "List not found"
@@ -66,7 +65,7 @@ enum RemindError: LocalizedError {
     }
 }
 
-enum TimeFilter {
+enum ShowOptions {
     case today
     case tomorrow
     case thisWeek
