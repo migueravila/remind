@@ -3,13 +3,15 @@ import Foundation
 
 struct ListCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "list", abstract: "Manage reminder lists")
+        commandName: "list", abstract: "Manage reminder lists"
+    )
     @Argument(help: "List name") var name: String?
     @Option(name: [.short, .customLong("delete")], help: "Delete a list")
     var delete: String?
     @Option(
         name: [.short, .customLong("rename")],
-        help: "Rename a list (provide old name)") var rename: String?
+        help: "Rename a list (provide old name)"
+    ) var rename: String?
     @Argument(parsing: .remaining, help: "New name for rename operation")
     var remainingArgs: [String] = []
     func run() async throws {
@@ -27,7 +29,8 @@ struct ListCommand: AsyncParsableCommand {
             }
             try await cli.renameList(oldName: oldName, newName: newName)
             OutputUtils.printSuccess(
-                "Renamed list '\(oldName)' to '\(newName)'")
+                "Renamed list '\(oldName)' to '\(newName)'"
+            )
             return
         }
         if let listName = name {
@@ -36,7 +39,8 @@ struct ListCommand: AsyncParsableCommand {
             if listExists {
                 let reminders = try await cli.getReminders(from: listName)
                 OutputUtils.printReminders(
-                    reminders, title: "Reminders in '\(listName)'")
+                    reminders, title: "Reminders in '\(listName)'"
+                )
             } else {
                 let list = try await cli.createList(name: listName)
                 OutputUtils.printSuccess("Created list: \(list.title)")
@@ -51,7 +55,8 @@ struct ListCommand: AsyncParsableCommand {
 struct ShowListsCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "lists", abstract: "Show all reminder lists",
-        aliases: ["l"])
+        aliases: ["l"]
+    )
 
     func run() async throws {
         let cli = RemindCLI()

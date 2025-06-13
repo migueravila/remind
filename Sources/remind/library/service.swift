@@ -27,7 +27,9 @@ class ReminderService {
                 ReminderList(
                     id: calendar.calendarIdentifier, title: calendar.title,
                     color: calendar.cgColor?.components?.description,
-                    reminderCount: reminderCount))
+                    reminderCount: reminderCount
+                )
+            )
         }
 
         return lists
@@ -42,8 +44,10 @@ class ReminderService {
 
         return ReminderList(
             id: calendar.calendarIdentifier, title: calendar.title,
-            reminderCount: 0)
+            reminderCount: 0
+        )
     }
+
     func deleteList(name: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == name
@@ -56,6 +60,7 @@ class ReminderService {
         }
         try eventStore.removeCalendar(calendar, commit: true)
     }
+
     func renameList(oldName: String, newName: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == oldName
@@ -94,9 +99,11 @@ class ReminderService {
                         title: ekReminder.title ?? "", notes: ekReminder.notes,
                         isCompleted: ekReminder.isCompleted,
                         priority: ReminderItem.Priority(
-                            rawValue: ekReminder.priority) ?? .none,
+                            rawValue: ekReminder.priority
+                        ) ?? .none,
                         dueDate: ekReminder.dueDateComponents?.date,
-                        listName: ekReminder.calendar.title)
+                        listName: ekReminder.calendar.title
+                    )
                 }
                 continuation.resume(returning: reminders)
             }
@@ -121,7 +128,7 @@ class ReminderService {
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate.map { calendar.isDateInTomorrow($0) }
-                        ?? false
+                    ?? false
             }
         case .thisWeek:
             let startOfWeek =
@@ -151,7 +158,7 @@ class ReminderService {
                     ($0.dueDate ?? Date.distantFuture)
                         < ($1.dueDate ?? Date.distantFuture)
                 }
-        case .specificDate(let date):
+        case let .specificDate(date):
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate.map {
@@ -179,7 +186,8 @@ class ReminderService {
 
         if let dueDate = reminder.dueDate {
             ekReminder.dueDateComponents = Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute], from: dueDate)
+                [.year, .month, .day, .hour, .minute], from: dueDate
+            )
         }
 
         try eventStore.save(ekReminder, commit: true)
@@ -196,7 +204,8 @@ class ReminderService {
                 }
                 var completedCount = 0
                 for reminder in reminders
-                where ids.contains(reminder.calendarItemIdentifier) {
+                    where ids.contains(reminder.calendarItemIdentifier)
+                {
                     reminder.isCompleted = true
                     do {
                         try self.eventStore.save(reminder, commit: false)
@@ -226,7 +235,8 @@ class ReminderService {
                 }
                 var deletedCount = 0
                 for reminder in reminders
-                where ids.contains(reminder.calendarItemIdentifier) {
+                    where ids.contains(reminder.calendarItemIdentifier)
+                {
                     do {
                         try self.eventStore.remove(reminder, commit: false)
                         deletedCount += 1

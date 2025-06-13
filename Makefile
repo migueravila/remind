@@ -12,11 +12,11 @@ test:
 	swift test
 
 format:
-	@if command -v swift-format >/dev/null 2>&1; then \
-		swift-format --configuration .format -i -r Sources/; \
+	@if command -v swiftformat >/dev/null 2>&1; then \
+		swiftformat --config .format Sources/; \
 		echo "Code formatted"; \
 	else \
-		echo "swift-format not found. Install with: brew install swift-format"; \
+		echo "swiftformat not found. Install with: brew install swiftformat"; \
 	fi
 
 lint:

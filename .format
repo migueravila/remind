@@ -1,59 +1,16 @@
-{
-  "version": 1,
-  "lineLength": 80,
-  "indentation": {
-    "spaces": 4
-  },
-  "maximumBlankLines": 1,
-  "respectsExistingLineBreaks": false,
-  "lineBreakBeforeControlFlowKeywords": false,
-  "lineBreakBeforeEachArgument": false,
-  "lineBreakBeforeEachGenericRequirement": false,
-  "prioritizeKeepingFunctionOutputTogether": true,
-  "indentConditionalCompilationBlocks": true,
-  "lineBreakAroundMultilineExpressionChainComponents": false,
-  "indentSwitchCaseLabels": false,
-  "spacesAroundRangeFormationOperators": false,
-  "noAssignmentInExpressions": {
-    "allowedFunctions": ["XCTAssertNoThrow"]
-  },
-  "rules": {
-    "AllPublicDeclarationsHaveDocumentation": false,
-    "AlwaysUseLowerCamelCase": true,
-    "AmbiguousTrailingClosureOverload": true,
-    "BeginDocumentationCommentWithOneLineSummary": false,
-    "DoNotUseSemicolons": true,
-    "DontRepeatTypeInStaticProperties": true,
-    "FileScopedDeclarationPrivacy": true,
-    "FullyIndirectEnum": true,
-    "GroupNumericLiterals": true,
-    "IdentifiersMustBeASCII": true,
-    "NeverForceUnwrap": false,
-    "NeverUseForceTry": false,
-    "NeverUseImplicitlyUnwrappedOptionals": false,
-    "NoAccessLevelOnExtensionDeclaration": true,
-    "NoBlockComments": true,
-    "NoCasesWithOnlyFallthrough": true,
-    "NoEmptyTrailingClosureParentheses": true,
-    "NoLabelsInCasePatterns": true,
-    "NoLeadingUnderscores": false,
-    "NoParensAroundConditions": true,
-    "NoPlaygroundLiterals": true,
-    "NoVoidReturnOnFunctionSignature": true,
-    "OmitExplicitReturns": false,
-    "OnlyOneTrailingClosureArgument": true,
-    "OrderedImports": true,
-    "ReplaceForEachWithForLoop": true,
-    "ReturnVoidInsteadOfEmptyTuple": true,
-    "TypeNamesShouldBeCapitalized": true,
-    "UseEarlyExits": false,
-    "UseLetInEveryBoundCaseVariable": true,
-    "UseShorthandTypeNames": true,
-    "UseSingleLinePropertyGetter": true,
-    "UseSynthesizedInitializer": true,
-    "UseTripleSlashForDocumentationComments": true,
-    "UseWhereClausesInForLoops": true,
-    "ValidateDocumentationComments": false
-  }
-}
+# general
+--indent 4
+--maxwidth 80
+--linebreaks lf
 
+# spacing
+--enable blankLinesAtStartOfScope
+--enable blankLinesAtEndOfScope
+--enable blankLinesBetweenScopes
+
+# miscelaneous
+--disable trailingCommas
+--enable sortImports
+--stripunusedargs closure-only
+--enable unusedArguments
+--enable redundantSelf

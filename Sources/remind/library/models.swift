@@ -60,7 +60,7 @@ enum RemindError: LocalizedError {
         case .reminderNotFound: return "Reminder not found"
         case .listNotFound: return "List not found"
         case .invalidDate: return "Invalid date format"
-        case .operationFailed(let message):
+        case let .operationFailed(message):
             return "Operation failed: \(message)"
         }
     }

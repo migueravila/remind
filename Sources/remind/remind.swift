@@ -8,5 +8,6 @@ import ArgumentParser
             ShowCommand.self, ListCommand.self, ShowListsCommand.self,
             AddReminderCommand.self, CompleteReminderCommand.self,
             DeleteReminderCommand.self,
-        ], defaultSubcommand: ShowCommand.self)
+        ], defaultSubcommand: ShowCommand.self
+    )
 }

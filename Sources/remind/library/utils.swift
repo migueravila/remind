@@ -1,6 +1,6 @@
 import Foundation
 
-struct OutputUtils {
+enum OutputUtils {
     private static let bullet = ">"
     private static let arrow = ">"
     private static let dash = "-"
@@ -14,7 +14,8 @@ struct OutputUtils {
         let maxTitleLength = lists.map { $0.title.count }.max() ?? 0
         for list in lists {
             let paddedTitle = list.title.padding(
-                toLength: maxTitleLength, withPad: " ", startingAt: 0)
+                toLength: maxTitleLength, withPad: " ", startingAt: 0
+            )
             let reminderText =
                 list.reminderCount == 1 ? "reminder" : "reminders"
             print(
@@ -44,17 +45,18 @@ struct OutputUtils {
             if let date1 = reminder1.dueDate, let date2 = reminder2.dueDate {
                 return date1 < date2
             }
-            if reminder1.dueDate != nil && reminder2.dueDate == nil {
+            if reminder1.dueDate != nil, reminder2.dueDate == nil {
                 return true
             }
-            if reminder1.dueDate == nil && reminder2.dueDate != nil {
+            if reminder1.dueDate == nil, reminder2.dueDate != nil {
                 return false
             }
             return reminder1.priority.rawValue > reminder2.priority.rawValue
         })
         for (index, reminder) in sortedReminders.enumerated() {
             printReminder(
-                reminder, maxTitleLength: maxTitleLength, index: index + 1)
+                reminder, maxTitleLength: maxTitleLength, index: index + 1
+            )
         }
     }
 
@@ -62,7 +64,8 @@ struct OutputUtils {
         _ reminder: ReminderItem, maxTitleLength: Int, index: Int
     ) {
         let paddedTitle = reminder.title.padding(
-            toLength: maxTitleLength, withPad: " ", startingAt: 0)
+            toLength: maxTitleLength, withPad: " ", startingAt: 0
+        )
         var info: [String] = []
         if let id = reminder.id {
             let shortId = String(id.prefix(4))
@@ -118,13 +121,14 @@ struct OutputUtils {
             }
         }
     }
+
     static func printSuccess(_ message: String) { print("\(plus) \(message)") }
     static func printError(_ message: String) { print("\(dash) \(message)") }
     static func printInfo(_ message: String) { print("\(bullet) \(message)") }
     static func printWarning(_ message: String) { print("\(star) \(message)") }
 }
 
-struct IDResolver {
+enum IDResolver {
     static func resolveIDs(
         _ inputs: [String], from reminders: [ReminderItem]
     ) -> [String] {
@@ -136,6 +140,7 @@ struct IDResolver {
         }
         return resolvedIDs
     }
+
     private static func resolveID(
         _ input: String, from reminders: [ReminderItem]
     ) -> String? {
@@ -164,6 +169,7 @@ struct IDResolver {
         }
         return nil
     }
+
     private static func sortReminders(
         _ reminders: [ReminderItem]
     ) -> [ReminderItem] {
@@ -174,10 +180,10 @@ struct IDResolver {
             if let date1 = reminder1.dueDate, let date2 = reminder2.dueDate {
                 return date1 < date2
             }
-            if reminder1.dueDate != nil && reminder2.dueDate == nil {
+            if reminder1.dueDate != nil, reminder2.dueDate == nil {
                 return true
             }
-            if reminder1.dueDate == nil && reminder2.dueDate != nil {
+            if reminder1.dueDate == nil, reminder2.dueDate != nil {
                 return false
             }
             return reminder1.priority.rawValue > reminder2.priority.rawValue
@@ -185,7 +191,7 @@ struct IDResolver {
     }
 }
 
-struct InputUtils {
+enum InputUtils {
     static func select<T>(
         message: String, options: [(String, T)], defaultIndex: Int = 0
     ) -> T? {
@@ -199,7 +205,8 @@ struct InputUtils {
         print("\nSelect option [\(defaultOption)]: ", terminator: "")
         guard
             let input = readLine()?.trimmingCharacters(
-                in: .whitespacesAndNewlines)
+                in: .whitespacesAndNewlines
+            )
         else { return options[defaultIndex].1 }
         if input.isEmpty { return options[defaultIndex].1 }
         if let matchedOption = options.first(where: {
@@ -208,13 +215,14 @@ struct InputUtils {
             return matchedOption.1
         }
         if let selection = Int(input), selection >= 1,
-            selection <= options.count
+           selection <= options.count
         {
             return options[selection - 1].1
         }
         print("Invalid selection. Using default: \(defaultOption)")
         return options[defaultIndex].1
     }
+
     static func input(
         message: String, defaultValue: String? = nil, required: Bool = false
     ) -> String? {
@@ -227,19 +235,22 @@ struct InputUtils {
         print(prompt, terminator: "")
         guard
             let input = readLine()?.trimmingCharacters(
-                in: .whitespacesAndNewlines)
+                in: .whitespacesAndNewlines
+            )
         else { return defaultValue }
         if input.isEmpty {
-            if required && defaultValue == nil {
+            if required, defaultValue == nil {
                 print("This field is required.")
                 return self.input(
                     message: message, defaultValue: defaultValue,
-                    required: required)
+                    required: required
+                )
             }
             return defaultValue
         }
         return input
     }
+
     static func confirm(message: String, defaultValue: Bool = false) -> Bool {
         let defaultText = defaultValue ? "Y/n" : "y/N"
         print("\(message) (\(defaultText)): ", terminator: "")
@@ -253,7 +264,7 @@ struct InputUtils {
     }
 }
 
-struct DateUtils {
+enum DateUtils {
     static func parseDate(_ dateString: String) -> Date? {
         let formatters = [
             "yyyy-MM-dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd HH:mm",
@@ -273,7 +284,7 @@ struct DateUtils {
         let components = dateString.split(separator: "-")
         guard components.count == 3 else { return nil }
         guard let day = Int(components[0]), let month = Int(components[1]),
-            let year = Int(components[2])
+              let year = Int(components[2])
         else { return nil }
         let fullYear =
             year < 50 ? 2000 + year : (year < 100 ? 1900 + year : year)
@@ -286,17 +297,20 @@ struct DateUtils {
 
     static func parseNaturalDate(_ input: String) -> Date? {
         let lowercased = input.lowercased().trimmingCharacters(
-            in: .whitespacesAndNewlines)
+            in: .whitespacesAndNewlines
+        )
         let calendar = Calendar.current
         let now = Date()
         switch lowercased {
         case "today": return calendar.startOfDay(for: now)
         case "tomorrow":
             return calendar.date(
-                byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
+                byAdding: .day, value: 1, to: calendar.startOfDay(for: now)
+            )
         case "yesterday":
             return calendar.date(
-                byAdding: .day, value: -1, to: calendar.startOfDay(for: now))
+                byAdding: .day, value: -1, to: calendar.startOfDay(for: now)
+            )
         default: return parseDate(input)
         }
     }
