@@ -1,0 +1,46 @@
+name: release
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: setup-xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      
+      - name: build
+        run: swift build -c release
+      
+      - name: build-package
+        run: |
+          mkdir release
+          cp .build/release/remind release/
+          cd release
+          tar -czf remind-macos.tar.gz remind
+          shasum -a 256 remind-macos.tar.gz > remind-macos.tar.gz.sha256
+      
+      - name: create-release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          release_name: Release v1.0.${{ github.run_number }}
+          body: "Automated release from commit ${{ github.sha }}"
+      
+      - name: upload-binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release/remind-macos.tar.gz
+          asset_name: remind-macos.tar.gz
+          asset_content_type: application/gzip
+
