@@ -1,7 +1,7 @@
 import EventKit
 import Foundation
 
-class ReminderService {
+class Manager {
     private let eventStore = EKEventStore()
 
     func requestAccess() async throws {
@@ -10,10 +10,10 @@ class ReminderService {
         switch authStatus {
         case .notDetermined:
             let granted = try await eventStore.requestAccess(to: .reminder)
-            if !granted { throw RemindError.accessDenied }
-        case .denied, .restricted: throw RemindError.accessDenied
+            if !granted { throw ProgramError.accessDenied }
+        case .denied, .restricted: throw ProgramError.accessDenied
         case .authorized, .fullAccess, .writeOnly: break
-        @unknown default: throw RemindError.unknownAuthorizationStatus
+        @unknown default: throw ProgramError.unknownAuthorizationStatus
         }
     }
 
@@ -53,10 +53,10 @@ class ReminderService {
             $0.title == name
         }
         guard let calendar = calendars.first else {
-            throw RemindError.listNotFound
+            throw ProgramError.listNotFound
         }
         guard calendar.allowsContentModifications else {
-            throw RemindError.operationFailed("Cannot delete system calendar")
+            throw ProgramError.operationFailed("Cannot delete system calendar")
         }
         try eventStore.removeCalendar(calendar, commit: true)
     }
@@ -66,25 +66,23 @@ class ReminderService {
             $0.title == oldName
         }
         guard let calendar = calendars.first else {
-            throw RemindError.listNotFound
+            throw ProgramError.listNotFound
         }
         guard calendar.allowsContentModifications else {
-            throw RemindError.operationFailed("Cannot modify system calendar")
+            throw ProgramError.operationFailed("Cannot modify system calendar")
         }
         calendar.title = newName
         try eventStore.saveCalendar(calendar, commit: true)
     }
 
-    func getReminders(
-        from listName: String? = nil
-    ) async throws -> [ReminderItem] {
+    func getReminders(from listName: String? = nil) async throws -> [Reminder] {
         let calendars: [EKCalendar]
 
         if let listName = listName {
             calendars = eventStore.calendars(for: .reminder).filter {
                 $0.title == listName
             }
-            if calendars.isEmpty { throw RemindError.listNotFound }
+            if calendars.isEmpty { throw ProgramError.listNotFound }
         } else {
             calendars = eventStore.calendars(for: .reminder)
         }
@@ -94,13 +92,12 @@ class ReminderService {
 
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 let reminders = (ekReminders ?? []).map { ekReminder in
-                    ReminderItem(
+                    Reminder(
                         id: ekReminder.calendarItemIdentifier,
                         title: ekReminder.title ?? "", notes: ekReminder.notes,
                         isCompleted: ekReminder.isCompleted,
-                        priority: ReminderItem.Priority(
-                            rawValue: ekReminder.priority
-                        ) ?? .none,
+                        priority: Reminder
+                            .Priority(rawValue: ekReminder.priority) ?? .none,
                         dueDate: ekReminder.dueDateComponents?.date,
                         listName: ekReminder.calendar.title
                     )
@@ -110,31 +107,33 @@ class ReminderService {
         }
     }
 
-    func getReminders(filter: TimeFilter) async throws -> [ReminderItem] {
+    func getReminders(filter: ShowOptions) async throws -> [Reminder] {
         let allReminders = try await getReminders(from: nil)
         let calendar = Calendar.current
         let now = Date()
+
         switch filter {
         case .today:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && (reminder.dueDate.map { calendar.isDateInToday($0) }
-                        ?? false
-                        || reminder.dueDate.map {
-                            $0 < calendar.startOfDay(for: now)
-                        } ?? false)
+                    &&
+                    (reminder.dueDate
+                        .map { calendar.isDateInToday($0) } ?? false
+                        || reminder.dueDate
+                        .map { $0 < calendar.startOfDay(for: now) } ??
+                        false)
             }
         case .tomorrow:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map { calendar.isDateInTomorrow($0) }
-                    ?? false
+                    && reminder.dueDate
+                    .map { calendar.isDateInTomorrow($0) } ?? false
             }
         case .thisWeek:
-            let startOfWeek =
-                calendar.dateInterval(of: .weekOfYear, for: now)?.start ?? now
-            let endOfWeek =
-                calendar.dateInterval(of: .weekOfYear, for: now)?.end ?? now
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?
+                .start ?? now
+            let endOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?
+                .end ?? now
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate.map { dueDate in
@@ -144,9 +143,8 @@ class ReminderService {
         case .overdue:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map {
-                        $0 < calendar.startOfDay(for: now)
-                    } ?? false
+                    && reminder.dueDate
+                    .map { $0 < calendar.startOfDay(for: now) } ?? false
             }
         case .flagged:
             return allReminders.filter { reminder in
@@ -155,27 +153,28 @@ class ReminderService {
         case .upcoming:
             return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }
                 .sorted {
-                    ($0.dueDate ?? Date.distantFuture)
-                        < ($1.dueDate ?? Date.distantFuture)
+                    ($0.dueDate ?? Date.distantFuture) <
+                        ($1.dueDate ?? Date.distantFuture)
                 }
         case let .specificDate(date):
             return allReminders.filter { reminder in
                 !reminder.isCompleted
-                    && reminder.dueDate.map {
-                        calendar.isDate($0, inSameDayAs: date)
-                    } ?? false
+                    && reminder.dueDate.map { calendar.isDate(
+                        $0,
+                        inSameDayAs: date
+                    ) } ?? false
             }
         }
     }
 
-    func createReminder(
-        _ reminder: ReminderItem, in listName: String
-    ) async throws {
+    func createReminder(_ reminder: Reminder,
+                        in listName: String) async throws
+    {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == listName
         }
         guard let calendar = calendars.first else {
-            throw RemindError.listNotFound
+            throw ProgramError.listNotFound
         }
 
         let ekReminder = EKReminder(eventStore: eventStore)
@@ -196,26 +195,27 @@ class ReminderService {
     func completeReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
+
         return await withCheckedContinuation { continuation in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
-                var completedCount = 0
+
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
                     reminder.isCompleted = true
                     do {
                         try self.eventStore.save(reminder, commit: false)
-                        completedCount += 1
                     } catch {
                         print(
                             "Failed to complete reminder: \(reminder.title ?? "Unknown")"
                         )
                     }
                 }
+
                 do { try self.eventStore.commit() } catch {
                     print("Failed to save changes")
                 }
@@ -227,36 +227,32 @@ class ReminderService {
     func deleteReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
+
         return await withCheckedContinuation { continuation in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
-                var deletedCount = 0
+
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
                     do {
                         try self.eventStore.remove(reminder, commit: false)
-                        deletedCount += 1
                     } catch {
                         print(
                             "Failed to delete reminder: \(reminder.title ?? "Unknown")"
                         )
                     }
                 }
+
                 do { try self.eventStore.commit() } catch {
                     print("Failed to save changes")
                 }
                 continuation.resume()
             }
         }
-    }
-
-    func findReminderById(_ id: String) async throws -> ReminderItem? {
-        let allReminders = try await getReminders(from: nil)
-        return allReminders.first { $0.id == id }
     }
 
     private func getRemindersCount(for calendar: EKCalendar) async -> Int {
