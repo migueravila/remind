@@ -31,8 +31,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: v1.0.${{ github.run_number }}
-          release_name: Release v1.0.${{ github.run_number }}
-          body: "Automated release from commit ${{ github.sha }}"
+          release_name: release v1.0.${{ github.run_number }}
+          body: "Release built from commit ${{ github.sha }}"
       
       - name: upload-binary
         uses: actions/upload-release-asset@v1
