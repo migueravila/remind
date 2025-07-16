@@ -78,7 +78,7 @@ class Manager {
     func getReminders(from listName: String? = nil) async throws -> [Reminder] {
         let calendars: [EKCalendar]
 
-        if let listName = listName {
+        if let listName {
             calendars = eventStore.calendars(for: .reminder).filter {
                 $0.title == listName
             }
@@ -256,7 +256,7 @@ class Manager {
     }
 
     private func getRemindersCount(for calendar: EKCalendar) async -> Int {
-        return await withCheckedContinuation { continuation in
+        await withCheckedContinuation { continuation in
             let predicate = eventStore.predicateForReminders(in: [calendar])
             eventStore.fetchReminders(matching: predicate) { reminders in
                 continuation.resume(returning: reminders?.count ?? 0)

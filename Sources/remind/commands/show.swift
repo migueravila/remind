@@ -42,14 +42,14 @@ struct ShowCommand: AsyncParsableCommand {
 
     private func getTitleForFilter(_ filter: ShowOptions) -> String {
         switch filter {
-        case .today: return "Today's Tasks"
-        case .tomorrow: return "Tomorrow's Tasks"
-        case .thisWeek: return "This Week's Tasks"
-        case .overdue: return "Overdue Tasks"
-        case .flagged: return "Flagged Tasks"
-        case .upcoming: return "Upcoming Tasks"
+        case .today: "Today's Tasks"
+        case .tomorrow: "Tomorrow's Tasks"
+        case .thisWeek: "This Week's Tasks"
+        case .overdue: "Overdue Tasks"
+        case .flagged: "Flagged Tasks"
+        case .upcoming: "Upcoming Tasks"
         case let .specificDate(date):
-            return "Tasks for \(DateUtils.formatDate(date))"
+            "Tasks for \(DateUtils.formatDate(date))"
         }
     }
 }

@@ -17,10 +17,10 @@ struct Reminder {
 
         var displayName: String {
             switch self {
-            case .none: return "None"
-            case .low: return "Low"
-            case .medium: return "Medium"
-            case .high: return "High"
+            case .none: "None"
+            case .low: "Low"
+            case .medium: "Medium"
+            case .high: "High"
             }
         }
     }
@@ -54,13 +54,13 @@ enum ProgramError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "Access to Reminders denied. Please grant access in System Preferences > Privacy & Security > Reminders"
-        case .unknownAuthorizationStatus: return "Unknown authorization status"
-        case .reminderNotFound: return "Reminder not found"
-        case .listNotFound: return "List not found"
-        case .invalidDate: return "Invalid date format"
+            "Access to Reminders denied. Please grant access in System Preferences > Privacy & Security > Reminders"
+        case .unknownAuthorizationStatus: "Unknown authorization status"
+        case .reminderNotFound: "Reminder not found"
+        case .listNotFound: "List not found"
+        case .invalidDate: "Invalid date format"
         case let .operationFailed(message):
-            return "Operation failed: \(message)"
+            "Operation failed: \(message)"
         }
     }
 }
