@@ -18,8 +18,7 @@ struct ShowCommand: AsyncParsableCommand {
         try await manager.requestAccess()
         let filter = parseTimeFilter(timeFilter)
         let reminders = try await manager.getReminders(filter: filter)
-        let title = getTitleForFilter(filter)
-        OutputUtils.printReminders(reminders, title: title)
+        OutputUtils.printReminders(reminders)
     }
 
     private func parseTimeFilter(_ args: [String]) -> ShowOptions {

@@ -11,8 +11,8 @@ private enum Constants {
     static let warningIcon = "⚠"
     static let infoIcon = "ℹ"
     
-    static let bullet = ">"
-    static let arrow = ">"
+    static let bullet = "›"
+    static let arrow = "›"
     static let dash = "-"
     static let star = "*"
     static let plus = "+"
@@ -140,12 +140,7 @@ enum OutputUtils {
         }
     }
 
-    static func printReminders(_ reminders: [Reminder], title: String? = nil) {
-        if let title = title {
-            printInfo(title)
-            print()
-        }
-
+    static func printReminders(_ reminders: [Reminder]) {
         guard !reminders.isEmpty else {
             print("No reminders found")
             return
@@ -538,7 +533,7 @@ enum InputUtils {
             if searchQuery.isEmpty {
                 print(message)
             } else {
-                print("\(message) \(OutputUtils.cyan(searchQuery))")
+                print("\(message) \(OutputUtils.green(searchQuery))")
             }
             lineCount += 1
 
@@ -547,8 +542,8 @@ enum InputUtils {
                 lineCount += 1
             } else {
                 for (index, option) in filteredOptions.enumerated() {
-                    let marker = index == selectedIndex ? "> " : "  "
-                    let style = index == selectedIndex ? OutputUtils.cyan(option.0) : option.0
+                    let marker = index == selectedIndex ? "› " : "  "
+                    let style = index == selectedIndex ? OutputUtils.green(option.0) : option.0
                     print("\(marker)\(style)")
                     lineCount += 1
                 }

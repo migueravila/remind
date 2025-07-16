@@ -48,10 +48,7 @@ struct ListCommand: AsyncParsableCommand {
 
             if listExists {
                 let reminders = try await manager.getReminders(from: listName)
-                OutputUtils.printReminders(
-                    reminders,
-                    title: "Reminders in '\(listName)'"
-                )
+                OutputUtils.printReminders(reminders)
             } else {
                 let list = try await manager.createList(name: listName)
                 OutputUtils.printSuccess("Created list: \(list.title)")
