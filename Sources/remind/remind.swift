@@ -13,6 +13,6 @@ import ArgumentParser
             CompleteReminderCommand.self,
             DeleteReminderCommand.self,
         ],
-        defaultSubcommand: ShowCommand.self,
+        defaultSubcommand: ShowCommand.self
     )
 }

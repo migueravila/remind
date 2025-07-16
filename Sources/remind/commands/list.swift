@@ -4,7 +4,7 @@ import Foundation
 struct ListCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
-        abstract: "Manage reminder lists",
+        abstract: "Manage reminder lists"
     )
 
     @Argument(help: "List name") var name: String?
