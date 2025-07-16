@@ -20,61 +20,115 @@ struct AddReminderCommand: AsyncParsableCommand {
     )
     var due: String?
 
+    @Flag(name: .long, help: "Disable interactive mode")
+    var noInteractive: Bool = false
+
     func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
 
-        let title: String
-        if description.isEmpty {
-            guard let inputTitle = InputUtils.input(
-                message: "Reminder title",
-                required: true
-            ) else {
-                OutputUtils.printError("Title is required")
-                return
-            }
-            title = inputTitle
+        let interactive = !noInteractive && description.isEmpty
+
+        if interactive {
+            try await runInteractive(manager: manager)
         } else {
-            title = description.joined(separator: " ")
+            try await runDirect(manager: manager)
+        }
+    }
+
+    private func runInteractive(manager: Manager) async throws {
+        guard let title = InputUtils.input(
+            message: "Reminder title",
+            required: true
+        ), !title.isEmpty else {
+            OutputUtils.printError("Title is required")
+            return
         }
 
+        let availableLists = try await manager.getAllLists()
+        guard !availableLists.isEmpty else {
+            OutputUtils.printError("No lists available. Create a list first.")
+            return
+        }
+
+        let listOptions = availableLists.map { ($0.title, $0.title) }
+        guard let selectedList = InputUtils.select(
+            message: "Select a list:",
+            options: listOptions
+        ) else {
+            OutputUtils.printError("No list selected")
+            return
+        }
+
+        let wantsDueDate = InputUtils.confirm(
+            message: "Set a due date?",
+            defaultValue: false
+        )
+
+        let dueDate: Date? = if wantsDueDate {
+            InputUtils.datePicker(message: "Select due date:")
+        } else {
+            nil
+        }
+
+        let notes = InputUtils.input(message: "Notes (optional)")
+
+        let priorityOptions: [(String, Reminder.Priority)] = [
+            ("None", .none),
+            ("Low", .low),
+            ("Medium", .medium),
+            ("High", .high)
+        ]
+
+        let priority = InputUtils.select(
+            message: "Select priority:",
+            options: priorityOptions
+        ) ?? .none
+
+        let reminder = Reminder(
+            id: nil,
+            title: title,
+            notes: notes?.isEmpty == false ? notes : nil,
+            isCompleted: false,
+            priority: priority,
+            dueDate: dueDate,
+            listName: selectedList
+        )
+
+        try await manager.createReminder(reminder, in: selectedList)
+        OutputUtils.printSuccess("Added reminder: \(title)")
+    }
+
+    private func runDirect(manager: Manager) async throws {
+        let title = description.joined(separator: " ")
+
         let targetList: String
-        if let list = list {
+        if let list {
             targetList = list
         } else {
             let availableLists = try await manager.getAllLists()
-            if availableLists.isEmpty {
+            guard let firstList = availableLists.first else {
                 OutputUtils
                     .printError("No lists available. Create a list first.")
                 return
             }
-
-            let listOptions = availableLists.map { ($0.title, $0.title) }
-            guard let selectedList = InputUtils.select(
-                message: "Select a list:", options: listOptions, defaultIndex: 0
-            ) else {
-                OutputUtils.printError("No list selected")
-                return
-            }
-            targetList = selectedList
+            targetList = firstList.title
         }
 
-        let dueDate: Date?
-        if let due = due {
-            dueDate = DateUtils.parseNaturalDate(due)
-            if dueDate == nil {
-                OutputUtils
-                    .printWarning(
-                        "Invalid date format, continuing without due date"
-                    )
-            }
+        let dueDate: Date? = if let due {
+            DateUtils.parseNaturalDate(due)
         } else {
-            dueDate = nil
+            nil
         }
 
         let reminder = Reminder(
-            id: nil, title: title, notes: nil, isCompleted: false,
-            priority: .none, dueDate: dueDate, listName: targetList
+            id: nil,
+            title: title,
+            notes: nil,
+            isCompleted: false,
+            priority: .none,
+            dueDate: dueDate,
+            listName: targetList
         )
 
         try await manager.createReminder(reminder, in: targetList)
