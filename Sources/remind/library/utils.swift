@@ -55,37 +55,6 @@ private enum Terminal {
     }
 }
 
-private enum KeyInput {
-    case up, down, left, right, enter, escape, backspace, character(Character), unknown
-
-    static func readKey() -> KeyInput {
-        var buffer = [UInt8](repeating: 0, count: Constants.bufferSize)
-        let bytesRead = read(STDIN_FILENO, &buffer, Constants.bufferSize)
-        
-        guard bytesRead > 0 else { return .unknown }
-
-        if bytesRead == 1 {
-            switch buffer[0] {
-            case 13, 10: return .enter
-            case 27: return .escape
-            case 127, 8: return .backspace
-            case let char where char >= 32 && char <= 126:
-                return .character(Character(UnicodeScalar(char)))
-            default: return .unknown
-            }
-        } else if bytesRead == 3 && buffer[0] == 27 && buffer[1] == 91 {
-            switch buffer[2] {
-            case 65: return .up
-            case 66: return .down
-            case 67: return .right
-            case 68: return .left
-            default: return .unknown
-            }
-        }
-        return .unknown
-    }
-}
-
 enum OutputUtils {
     private enum Color {
         static let reset = "\u{001B}[0m"
@@ -98,7 +67,6 @@ enum OutputUtils {
         static let magenta = "\u{001B}[35m"
     }
 
-    // Modern bullet point
     private static let bullet = "•"
     private static let maxTitleLength = 35
     private static let columnSpacing = 4
@@ -184,20 +152,21 @@ enum OutputUtils {
         }
 
         let sortedReminders = sortReminders(reminders)
+        
+        let maxListNameWidth = calculateMaxListNameWidth(reminders: sortedReminders)
+        let maxPriorityWidth = calculateMaxPriorityWidth(reminders: sortedReminders)
 
         for (index, reminder) in sortedReminders.enumerated() {
-            printModernReminder(reminder, index: index + 1)
+            printModernReminder(reminder, index: index + 1, maxListNameWidth: maxListNameWidth, maxPriorityWidth: maxPriorityWidth)
         }
     }
 
     static func sortReminders(_ reminders: [Reminder]) -> [Reminder] {
         return reminders.sorted { reminder1, reminder2 in
-            // Incomplete tasks first
             if reminder1.isCompleted != reminder2.isCompleted {
                 return !reminder1.isCompleted && reminder2.isCompleted
             }
             
-            // Then by due date
             if let date1 = reminder1.dueDate, let date2 = reminder2.dueDate {
                 return date1 < date2
             }
@@ -208,60 +177,70 @@ enum OutputUtils {
                 return false
             }
             
-            // Finally by priority
             return reminder1.priority.rawValue > reminder2.priority.rawValue
         }
     }
 
-    private static func printModernReminder(_ reminder: Reminder, index: Int) {
+    private static func calculateMaxListNameWidth(reminders: [Reminder]) -> Int {
+        let maxListName = reminders.compactMap { $0.listName }.max { $0.count < $1.count }
+        return maxListName?.count ?? 0
+    }
+    
+    private static func calculateMaxPriorityWidth(reminders: [Reminder]) -> Int {
+        let maxPriority = reminders.map { "!\($0.priority.displayName.lowercased())" }.max { $0.count < $1.count }
+        return maxPriority?.count ?? 0
+    }
+
+    private static func printModernReminder(_ reminder: Reminder, index: Int, maxListNameWidth: Int, maxPriorityWidth: Int) {
         let title = truncateTitle(reminder.title, maxLength: maxTitleLength)
         let paddedTitle = title.padding(toLength: maxTitleLength, withPad: " ", startingAt: 0)
         
-        var info: [String] = []
-        
-        // Add ID information first (index and short ID)
-        if let id = reminder.id {
-            let shortId = String(id.prefix(4))
-            info.append(dim("[\(index)] \(shortId)"))
+        let isOverdue = if let dueDate = reminder.dueDate {
+            dueDate < Date() && !reminder.isCompleted
         } else {
-            info.append(dim("[\(index)]"))
+            false
         }
         
-        // Add due date with styling
+        let statusIcon = if reminder.isCompleted {
+            green("✓")
+        } else if isOverdue {
+            red("○")
+        } else {
+            "○"
+        }
+        
+        let shortId = if let id = reminder.id {
+            String(id.prefix(4)).padding(toLength: 4, withPad: " ", startingAt: 0)
+        } else {
+            "    "
+        }
+        
+        var components: [String] = []
+        
+        if let listName = reminder.listName {
+            let paddedListName = listName.padding(toLength: maxListNameWidth, withPad: " ", startingAt: 0)
+            components.append(blue(paddedListName))
+        }
+        
+        let priorityText = "!\(reminder.priority.displayName.lowercased())"
+        let paddedPriority = priorityText.padding(toLength: maxPriorityWidth, withPad: " ", startingAt: 0)
+        components.append(yellow(paddedPriority))
+        
         if let dueDate = reminder.dueDate {
             let dateText = formatDateForDisplay(dueDate)
-            let isOverdue = dueDate < Date() && !reminder.isCompleted
             let styledDate = isOverdue ? red(dateText) : dateText
-            info.append(styledDate)
+            components.append(styledDate)
         } else {
-            info.append(dim("no date"))
+            components.append(dim("no date"))
         }
         
-        // Add list name
-        if let listName = reminder.listName {
-            info.append(blue(listName))
-        }
-        
-        // Add priority if not none
-        if reminder.priority != .none {
-            let priorityText = reminder.priority.displayName.lowercased()
-            info.append(yellow("!\(priorityText)"))
-        }
-        
-        // Add completion status
-        if reminder.isCompleted {
-            info.append(green("✓ done"))
-        } else if let dueDate = reminder.dueDate, dueDate < Date() {
-            info.append(red("overdue"))
-        }
-        
-        // Add notes indicator if present
         if let notes = reminder.notes, !notes.isEmpty {
-            info.append(dim("📝"))
+            components.append(dim("* note"))
         }
         
-        let infoText = info.joined(separator: " \(bullet) ")
-        print("\(paddedTitle) \(bullet) \(infoText)")
+        let infoText = components.joined(separator: " \(bullet) ")
+        
+        print("\(paddedTitle) \(statusIcon) \(dim(shortId)) \(bullet) \(infoText)")
     }
 
     private static func formatDateForDisplay(_ date: Date) -> String {
@@ -298,14 +277,41 @@ enum OutputUtils {
         return String(title.prefix(maxLength - 3)) + "..."
     }
     
-    // You'll need to implement this based on your ReminderList structure
     private static func calculateOverdueCount(for list: ReminderList) -> Int {
-        // This is a placeholder - you'll need to implement based on your data structure
-        // For now, returning 0, but you should calculate actual overdue tasks
         return 0
     }
 }
 
+private enum KeyInput {
+    case up, down, left, right, enter, escape, backspace, character(Character), unknown
+
+    static func readKey() -> KeyInput {
+        var buffer = [UInt8](repeating: 0, count: Constants.bufferSize)
+        let bytesRead = read(STDIN_FILENO, &buffer, Constants.bufferSize)
+        
+        guard bytesRead > 0 else { return .unknown }
+
+        if bytesRead == 1 {
+            switch buffer[0] {
+            case 13, 10: return .enter
+            case 27: return .escape
+            case 127, 8: return .backspace
+            case let char where char >= 32 && char <= 126:
+                return .character(Character(UnicodeScalar(char)))
+            default: return .unknown
+            }
+        } else if bytesRead == 3 && buffer[0] == 27 && buffer[1] == 91 {
+            switch buffer[2] {
+            case 65: return .up
+            case 66: return .down
+            case 67: return .right
+            case 68: return .left
+            default: return .unknown
+            }
+        }
+        return .unknown
+    }
+}
 
 
 enum IDResolver {
