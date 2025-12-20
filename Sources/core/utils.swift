@@ -55,7 +55,7 @@ private enum Terminal {
     }
 }
 
-enum OutputUtils {
+public enum OutputUtils {
     private enum Color {
         static let reset = "\u{001B}[0m"
         static let dim = "\u{001B}[2m"
@@ -71,51 +71,51 @@ enum OutputUtils {
     private static let maxTitleLength = 35
     private static let columnSpacing = 4
 
-    static func dim(_ text: String) -> String {
+    public static func dim(_ text: String) -> String {
         return "\(Color.dim)\(text)\(Color.reset)"
     }
 
-    static func green(_ text: String) -> String {
+    public static func green(_ text: String) -> String {
         return "\(Color.green)\(text)\(Color.reset)"
     }
 
-    static func red(_ text: String) -> String {
+    public static func red(_ text: String) -> String {
         return "\(Color.red)\(text)\(Color.reset)"
     }
 
-    static func yellow(_ text: String) -> String {
+    public static func yellow(_ text: String) -> String {
         return "\(Color.yellow)\(text)\(Color.reset)"
     }
 
-    static func cyan(_ text: String) -> String {
+    public static func cyan(_ text: String) -> String {
         return "\(Color.cyan)\(text)\(Color.reset)"
     }
 
-    static func blue(_ text: String) -> String {
+    public static func blue(_ text: String) -> String {
         return "\(Color.blue)\(text)\(Color.reset)"
     }
 
-    static func magenta(_ text: String) -> String {
+    public static func magenta(_ text: String) -> String {
         return "\(Color.magenta)\(text)\(Color.reset)"
     }
 
-    static func printSuccess(_ message: String) {
+    public static func printSuccess(_ message: String) {
         print("\(green(Constants.successIcon)) \(message)")
     }
 
-    static func printError(_ message: String) {
+    public static func printError(_ message: String) {
         print("\(red(Constants.errorIcon)) \(message)")
     }
 
-    static func printWarning(_ message: String) {
+    public static func printWarning(_ message: String) {
         print("\(yellow(Constants.warningIcon)) \(message)")
     }
 
-    static func printInfo(_ message: String) {
+    public static func printInfo(_ message: String) {
         print("\(cyan(Constants.infoIcon)) \(message)")
     }
 
-    static func printLists(_ lists: [ReminderList]) {
+    public static func printLists(_ lists: [ReminderList]) {
         guard !lists.isEmpty else {
             print("No reminder lists found")
             return
@@ -124,30 +124,30 @@ enum OutputUtils {
         for list in lists {
             let taskText = list.reminderCount == 1 ? "task" : "tasks"
             let overdueCount = calculateOverdueCount(for: list)
-            
+
             let title = truncateTitle(list.title, maxLength: maxTitleLength)
             let paddedTitle = title.padding(toLength: maxTitleLength, withPad: " ", startingAt: 0)
-            
+
             var info: [String] = []
             info.append(dim("\(list.reminderCount) \(taskText)"))
-            
+
             if overdueCount > 0 {
                 info.append(red("\(overdueCount) overdue"))
             }
-            
+
             let infoText = info.joined(separator: " \(bullet) ")
             print("\(paddedTitle) \(bullet) \(infoText)")
         }
     }
 
-    static func printReminders(_ reminders: [Reminder]) {
+    public static func printReminders(_ reminders: [Reminder]) {
         guard !reminders.isEmpty else {
             print("No reminders found")
             return
         }
 
         let sortedReminders = sortReminders(reminders)
-        
+
         let maxListNameWidth = calculateMaxListNameWidth(reminders: sortedReminders)
         let maxPriorityWidth = calculateMaxPriorityWidth(reminders: sortedReminders)
 
@@ -156,7 +156,7 @@ enum OutputUtils {
         }
     }
 
-    static func sortReminders(_ reminders: [Reminder]) -> [Reminder] {
+    public static func sortReminders(_ reminders: [Reminder]) -> [Reminder] {
         return reminders.sorted { reminder1, reminder2 in
             if reminder1.isCompleted != reminder2.isCompleted {
                 return !reminder1.isCompleted && reminder2.isCompleted
@@ -309,8 +309,8 @@ private enum KeyInput {
 }
 
 
-enum IDResolver {
-    static func resolveIDs(_ inputs: [String], from reminders: [Reminder]) -> [String] {
+public enum IDResolver {
+    public static func resolveIDs(_ inputs: [String], from reminders: [Reminder]) -> [String] {
         var resolvedIDs: [String] = []
         for input in inputs {
             if let id = resolveID(input, from: reminders) {
@@ -350,8 +350,8 @@ enum IDResolver {
     }
 }
 
-enum InputUtils {
-    static func select<T>(
+public enum InputUtils {
+    public static func select<T>(
         message: String,
         options: [(String, T)],
         defaultIndex: Int = 0,
@@ -374,7 +374,7 @@ enum InputUtils {
         )
     }
 
-    static func input(
+    public static func input(
         message: String,
         defaultValue: String? = nil,
         required: Bool = false
@@ -405,7 +405,7 @@ enum InputUtils {
         return input
     }
 
-    static func confirm(message: String, defaultValue: Bool = false) -> Bool {
+    public static func confirm(message: String, defaultValue: Bool = false) -> Bool {
         let defaultText = defaultValue ? "Y/n" : "y/N"
         print("\(message) (\(defaultText)): ", terminator: "")
 
@@ -424,7 +424,7 @@ enum InputUtils {
         return result
     }
 
-    static func datePicker(
+    public static func datePicker(
         message: String,
         initialDate: Date = Date(),
         interactive: Bool = true
@@ -700,8 +700,8 @@ enum InputUtils {
     }
 }
 
-enum DateUtils {
-    static func parseDate(_ dateString: String) -> Date? {
+public enum DateUtils {
+    public static func parseDate(_ dateString: String) -> Date? {
         let formatters = [
             "yyyy-MM-dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd HH:mm", "MM/dd/yyyy HH:mm"
         ]
@@ -717,7 +717,7 @@ enum DateUtils {
         return nil
     }
 
-    static func parseSpecificDate(_ dateString: String) -> Date? {
+    public static func parseSpecificDate(_ dateString: String) -> Date? {
         let components = dateString.split(separator: "-")
         guard components.count == 3 else { return nil }
 
@@ -735,7 +735,7 @@ enum DateUtils {
         return Calendar.current.date(from: dateComponents)
     }
 
-    static func parseNaturalDate(_ input: String) -> Date? {
+    public static func parseNaturalDate(_ input: String) -> Date? {
         let lowercased = input.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let calendar = Calendar.current
         let now = Date()
@@ -752,7 +752,7 @@ enum DateUtils {
         }
     }
 
-    static func formatDate(_ date: Date) -> String {
+    public static func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

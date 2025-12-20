@@ -1,10 +1,12 @@
 import EventKit
 import Foundation
 
-class Manager {
+public class Manager {
     private let eventStore = EKEventStore()
 
-    func requestAccess() async throws {
+    public init() {}
+
+    public func requestAccess() async throws {
         let authStatus = EKEventStore.authorizationStatus(for: .reminder)
 
         switch authStatus {
@@ -17,7 +19,7 @@ class Manager {
         }
     }
 
-    func getAllLists() async throws -> [ReminderList] {
+    public func getAllLists() async throws -> [ReminderList] {
         let calendars = eventStore.calendars(for: .reminder)
         var lists: [ReminderList] = []
 
@@ -35,7 +37,7 @@ class Manager {
         return lists
     }
 
-    func createList(name: String) async throws -> ReminderList {
+    public func createList(name: String) async throws -> ReminderList {
         let calendar = EKCalendar(for: .reminder, eventStore: eventStore)
         calendar.title = name
         calendar.source = eventStore.defaultCalendarForNewReminders()?.source
@@ -48,7 +50,7 @@ class Manager {
         )
     }
 
-    func deleteList(name: String) async throws {
+    public func deleteList(name: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == name
         }
@@ -61,7 +63,7 @@ class Manager {
         try eventStore.removeCalendar(calendar, commit: true)
     }
 
-    func renameList(oldName: String, newName: String) async throws {
+    public func renameList(oldName: String, newName: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == oldName
         }
@@ -75,7 +77,7 @@ class Manager {
         try eventStore.saveCalendar(calendar, commit: true)
     }
 
-    func getReminders(from listName: String? = nil) async throws -> [Reminder] {
+    public func getReminders(from listName: String? = nil) async throws -> [Reminder] {
         let calendars: [EKCalendar]
 
         if let listName {
@@ -107,7 +109,7 @@ class Manager {
         }
     }
 
-    func getReminders(filter: ShowOptions) async throws -> [Reminder] {
+    public func getReminders(filter: ShowOptions) async throws -> [Reminder] {
         let allReminders = try await getReminders(from: nil)
         let calendar = Calendar.current
         let now = Date()
@@ -167,8 +169,8 @@ class Manager {
         }
     }
 
-    func createReminder(_ reminder: Reminder,
-                        in listName: String) async throws
+    public func createReminder(_ reminder: Reminder,
+                               in listName: String) async throws
     {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == listName
@@ -192,7 +194,7 @@ class Manager {
         try eventStore.save(ekReminder, commit: true)
     }
 
-    func completeReminders(ids: [String]) async throws {
+    public func completeReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
@@ -224,7 +226,7 @@ class Manager {
         }
     }
 
-    func deleteReminders(ids: [String]) async throws {
+    public func deleteReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 

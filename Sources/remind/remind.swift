@@ -1,4 +1,5 @@
 import ArgumentParser
+import core
 
 @main struct Remind: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
