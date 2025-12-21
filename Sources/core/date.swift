@@ -1,7 +1,6 @@
 import Foundation
 
 public enum DateUtils {
-    // Cached formatters for performance
     private static let dateFormatters: [DateFormatter] = {
         let formats = [
             "yyyy-MM-dd",
