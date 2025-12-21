@@ -276,8 +276,10 @@ public enum OutputUtils {
         let title = truncateTitle(reminder.title, maxLength: maxTitleLength)
         let paddedTitle = title.padding(toLength: maxTitleLength, withPad: " ", startingAt: 0)
 
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
         let isOverdue = if let dueDate = reminder.dueDate {
-            dueDate < Date() && !reminder.isCompleted
+            dueDate < startOfToday && !reminder.isCompleted
         } else {
             false
         }
@@ -366,11 +368,12 @@ public enum OutputUtils {
         for list: ReminderList,
         reminders: [Reminder]
     ) -> Int {
-        let now = Date()
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: Date())
         return reminders.filter { reminder in
             reminder.listName == list.title &&
             !reminder.isCompleted &&
-            (reminder.dueDate.map { $0 < now } ?? false)
+            (reminder.dueDate.map { $0 < startOfToday } ?? false)
         }.count
     }
 }
