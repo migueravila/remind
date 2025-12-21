@@ -56,7 +56,8 @@ struct ListCommand: AsyncParsableCommand {
             }
         } else {
             let lists = try await manager.getAllLists()
-            OutputUtils.printLists(lists)
+            let reminders = try await manager.getReminders(from: nil)
+            OutputUtils.printLists(lists, reminders: reminders)
         }
     }
 }
@@ -72,6 +73,7 @@ struct ShowListsCommand: AsyncParsableCommand {
         let manager = Manager()
         try await manager.requestAccess()
         let lists = try await manager.getAllLists()
-        OutputUtils.printLists(lists)
+        let reminders = try await manager.getReminders(from: nil)
+        OutputUtils.printLists(lists, reminders: reminders)
     }
 }

@@ -2,6 +2,41 @@ import ArgumentParser
 import core
 import Foundation
 
+// MARK: - Shared Helper
+
+private func resolveReminderIDs(
+    _ inputs: [String],
+    examples: [String]
+) async throws -> (manager: Manager, ids: [String])? {
+    guard !inputs.isEmpty else {
+        OutputUtils.printError("Please provide at least one reminder number or ID")
+        print("Examples:")
+        examples.forEach { print($0) }
+        return nil
+    }
+
+    let manager = Manager()
+    try await manager.requestAccess()
+    let allReminders = try await manager.getReminders(from: nil)
+    let validIDs = IDResolver.resolveIDs(inputs, from: allReminders)
+
+    guard !validIDs.isEmpty else {
+        OutputUtils.printError("No valid reminder numbers or IDs found")
+        print("Use 'remind show' to see available reminders with their numbers")
+        return nil
+    }
+
+    if validIDs.count < inputs.count {
+        OutputUtils.printWarning(
+            "Only \(validIDs.count) of \(inputs.count) inputs could be resolved"
+        )
+    }
+
+    return (manager, validIDs)
+}
+
+// MARK: - Commands
+
 struct AddReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "add",
@@ -151,42 +186,20 @@ struct CompleteReminderCommand: AsyncParsableCommand {
     var inputs: [String]
 
     func run() async throws {
-        guard !inputs.isEmpty else {
-            OutputUtils
-                .printError("Please provide at least one reminder number or ID")
-            print("Examples:")
-            print("  remind complete 1        # Complete reminder [1]")
-            print("  remind complete 1 2 3    # Complete multiple reminders")
-            print("  remind complete 4A83     # Complete by partial ID")
+        let examples = [
+            "  remind complete 1        # Complete reminder [1]",
+            "  remind complete 1 2 3    # Complete multiple reminders",
+            "  remind complete 4A83     # Complete by partial ID"
+        ]
+
+        guard let result = try await resolveReminderIDs(inputs, examples: examples) else {
             return
         }
 
-        let manager = Manager()
-        try await manager.requestAccess()
-        let allReminders = try await manager.getReminders(from: nil)
-        let validIDs = IDResolver.resolveIDs(inputs, from: allReminders)
-
-        guard !validIDs.isEmpty else {
-            OutputUtils.printError("No valid reminder numbers or IDs found")
-            print(
-                "Use 'remind show' to see available reminders with their numbers"
-            )
-            return
-        }
-
-        if validIDs.count < inputs.count {
-            let resolvedCount = validIDs.count
-            let totalCount = inputs.count
-            OutputUtils
-                .printWarning(
-                    "Only \(resolvedCount) of \(totalCount) inputs could be resolved"
-                )
-        }
-
-        try await manager.completeReminders(ids: validIDs)
-        let message = validIDs
-            .count == 1 ? "Completed reminder" :
-            "Completed \(validIDs.count) reminders"
+        try await result.manager.completeReminders(ids: result.ids)
+        let message = result.ids.count == 1
+            ? "Completed reminder"
+            : "Completed \(result.ids.count) reminders"
         OutputUtils.printSuccess(message)
     }
 }
@@ -205,40 +218,18 @@ struct DeleteReminderCommand: AsyncParsableCommand {
     var inputs: [String]
 
     func run() async throws {
-        guard !inputs.isEmpty else {
-            OutputUtils
-                .printError("Please provide at least one reminder number or ID")
-            print("Examples:")
-            print("  remind delete 1          # Delete reminder [1]")
-            print("  remind delete 1 2 3      # Delete multiple reminders")
-            print("  remind delete 4A83       # Delete by partial ID")
+        let examples = [
+            "  remind delete 1          # Delete reminder [1]",
+            "  remind delete 1 2 3      # Delete multiple reminders",
+            "  remind delete 4A83       # Delete by partial ID"
+        ]
+
+        guard let result = try await resolveReminderIDs(inputs, examples: examples) else {
             return
-        }
-
-        let manager = Manager()
-        try await manager.requestAccess()
-        let allReminders = try await manager.getReminders(from: nil)
-        let validIDs = IDResolver.resolveIDs(inputs, from: allReminders)
-
-        guard !validIDs.isEmpty else {
-            OutputUtils.printError("No valid reminder numbers or IDs found")
-            print(
-                "Use 'remind show' to see available reminders with their numbers"
-            )
-            return
-        }
-
-        if validIDs.count < inputs.count {
-            let resolvedCount = validIDs.count
-            let totalCount = inputs.count
-            OutputUtils
-                .printWarning(
-                    "Only \(resolvedCount) of \(totalCount) inputs could be resolved"
-                )
         }
 
         let shouldDelete = InputUtils.confirm(
-            message: "Are you sure you want to delete \(validIDs.count) reminder(s)?",
+            message: "Are you sure you want to delete \(result.ids.count) reminder(s)?",
             defaultValue: false
         )
 
@@ -247,10 +238,10 @@ struct DeleteReminderCommand: AsyncParsableCommand {
             return
         }
 
-        try await manager.deleteReminders(ids: validIDs)
-        let message = validIDs
-            .count == 1 ? "Deleted reminder" :
-            "Deleted \(validIDs.count) reminders"
+        try await result.manager.deleteReminders(ids: result.ids)
+        let message = result.ids.count == 1
+            ? "Deleted reminder"
+            : "Deleted \(result.ids.count) reminders"
         OutputUtils.printSuccess(message)
     }
 }

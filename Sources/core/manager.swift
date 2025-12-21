@@ -198,13 +198,14 @@ public class Manager {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        return await withCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
 
+                var failedCount = 0
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
@@ -212,16 +213,24 @@ public class Manager {
                     do {
                         try self.eventStore.save(reminder, commit: false)
                     } catch {
-                        print(
-                            "Failed to complete reminder: \(reminder.title ?? "Unknown")"
-                        )
+                        failedCount += 1
                     }
                 }
 
-                do { try self.eventStore.commit() } catch {
-                    print("Failed to save changes")
+                do {
+                    try self.eventStore.commit()
+                    if failedCount > 0 {
+                        continuation.resume(throwing: ProgramError.operationFailed(
+                            "Failed to complete \(failedCount) reminder(s)"
+                        ))
+                    } else {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to save changes"
+                    ))
                 }
-                continuation.resume()
             }
         }
     }
@@ -230,29 +239,38 @@ public class Manager {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        return await withCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
 
+                var failedCount = 0
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
                     do {
                         try self.eventStore.remove(reminder, commit: false)
                     } catch {
-                        print(
-                            "Failed to delete reminder: \(reminder.title ?? "Unknown")"
-                        )
+                        failedCount += 1
                     }
                 }
 
-                do { try self.eventStore.commit() } catch {
-                    print("Failed to save changes")
+                do {
+                    try self.eventStore.commit()
+                    if failedCount > 0 {
+                        continuation.resume(throwing: ProgramError.operationFailed(
+                            "Failed to delete \(failedCount) reminder(s)"
+                        ))
+                    } else {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to save changes"
+                    ))
                 }
-                continuation.resume()
             }
         }
     }
