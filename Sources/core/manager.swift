@@ -1,10 +1,12 @@
 import EventKit
 import Foundation
 
-class Manager {
+public class Manager {
     private let eventStore = EKEventStore()
 
-    func requestAccess() async throws {
+    public init() {}
+
+    public func requestAccess() async throws {
         let authStatus = EKEventStore.authorizationStatus(for: .reminder)
 
         switch authStatus {
@@ -17,7 +19,7 @@ class Manager {
         }
     }
 
-    func getAllLists() async throws -> [ReminderList] {
+    public func getAllLists() async throws -> [ReminderList] {
         let calendars = eventStore.calendars(for: .reminder)
         var lists: [ReminderList] = []
 
@@ -35,7 +37,7 @@ class Manager {
         return lists
     }
 
-    func createList(name: String) async throws -> ReminderList {
+    public func createList(name: String) async throws -> ReminderList {
         let calendar = EKCalendar(for: .reminder, eventStore: eventStore)
         calendar.title = name
         calendar.source = eventStore.defaultCalendarForNewReminders()?.source
@@ -48,7 +50,7 @@ class Manager {
         )
     }
 
-    func deleteList(name: String) async throws {
+    public func deleteList(name: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == name
         }
@@ -61,7 +63,7 @@ class Manager {
         try eventStore.removeCalendar(calendar, commit: true)
     }
 
-    func renameList(oldName: String, newName: String) async throws {
+    public func renameList(oldName: String, newName: String) async throws {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == oldName
         }
@@ -75,7 +77,7 @@ class Manager {
         try eventStore.saveCalendar(calendar, commit: true)
     }
 
-    func getReminders(from listName: String? = nil) async throws -> [Reminder] {
+    public func getReminders(from listName: String? = nil) async throws -> [Reminder] {
         let calendars: [EKCalendar]
 
         if let listName {
@@ -107,7 +109,7 @@ class Manager {
         }
     }
 
-    func getReminders(filter: ShowOptions) async throws -> [Reminder] {
+    public func getReminders(filter: ShowOptions) async throws -> [Reminder] {
         let allReminders = try await getReminders(from: nil)
         let calendar = Calendar.current
         let now = Date()
@@ -167,8 +169,8 @@ class Manager {
         }
     }
 
-    func createReminder(_ reminder: Reminder,
-                        in listName: String) async throws
+    public func createReminder(_ reminder: Reminder,
+                               in listName: String) async throws
     {
         let calendars = eventStore.calendars(for: .reminder).filter {
             $0.title == listName
@@ -192,17 +194,83 @@ class Manager {
         try eventStore.save(ekReminder, commit: true)
     }
 
-    func completeReminders(ids: [String]) async throws {
+    public func updateReminder(
+        id: String,
+        title: String? = nil,
+        notes: String? = nil,
+        priority: Reminder.Priority? = nil,
+        dueDate: Date?? = nil,
+        listName: String? = nil
+    ) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        return await withCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.eventStore.fetchReminders(matching: predicate) { ekReminders in
+                guard let reminders = ekReminders,
+                      let ekReminder = reminders.first(where: {
+                          $0.calendarItemIdentifier == id
+                      })
+                else {
+                    continuation.resume(throwing: ProgramError.reminderNotFound)
+                    return
+                }
+
+                if let title = title {
+                    ekReminder.title = title
+                }
+
+                if let notes = notes {
+                    ekReminder.notes = notes.isEmpty ? nil : notes
+                }
+
+                if let priority = priority {
+                    ekReminder.priority = priority.rawValue
+                }
+
+                if let dueDateValue = dueDate {
+                    if let date = dueDateValue {
+                        ekReminder.dueDateComponents = Calendar.current.dateComponents(
+                            [.year, .month, .day, .hour, .minute], from: date
+                        )
+                    } else {
+                        ekReminder.dueDateComponents = nil
+                    }
+                }
+
+                if let listName = listName {
+                    let calendars = self.eventStore.calendars(for: .reminder).filter {
+                        $0.title == listName
+                    }
+                    if let calendar = calendars.first {
+                        ekReminder.calendar = calendar
+                    }
+                }
+
+                do {
+                    try self.eventStore.save(ekReminder, commit: true)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to update reminder"
+                    ))
+                }
+            }
+        }
+    }
+
+    public func completeReminders(ids: [String]) async throws {
+        let allCalendars = eventStore.calendars(for: .reminder)
+        let predicate = eventStore.predicateForReminders(in: allCalendars)
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
 
+                var failedCount = 0
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
@@ -210,47 +278,64 @@ class Manager {
                     do {
                         try self.eventStore.save(reminder, commit: false)
                     } catch {
-                        print(
-                            "Failed to complete reminder: \(reminder.title ?? "Unknown")"
-                        )
+                        failedCount += 1
                     }
                 }
 
-                do { try self.eventStore.commit() } catch {
-                    print("Failed to save changes")
+                do {
+                    try self.eventStore.commit()
+                    if failedCount > 0 {
+                        continuation.resume(throwing: ProgramError.operationFailed(
+                            "Failed to complete \(failedCount) reminder(s)"
+                        ))
+                    } else {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to save changes"
+                    ))
                 }
-                continuation.resume()
             }
         }
     }
 
-    func deleteReminders(ids: [String]) async throws {
+    public func deleteReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        return await withCheckedContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
                     return
                 }
 
+                var failedCount = 0
                 for reminder in reminders
                     where ids.contains(reminder.calendarItemIdentifier)
                 {
                     do {
                         try self.eventStore.remove(reminder, commit: false)
                     } catch {
-                        print(
-                            "Failed to delete reminder: \(reminder.title ?? "Unknown")"
-                        )
+                        failedCount += 1
                     }
                 }
 
-                do { try self.eventStore.commit() } catch {
-                    print("Failed to save changes")
+                do {
+                    try self.eventStore.commit()
+                    if failedCount > 0 {
+                        continuation.resume(throwing: ProgramError.operationFailed(
+                            "Failed to delete \(failedCount) reminder(s)"
+                        ))
+                    } else {
+                        continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to save changes"
+                    ))
                 }
-                continuation.resume()
             }
         }
     }

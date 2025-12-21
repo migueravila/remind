@@ -1,4 +1,5 @@
 import ArgumentParser
+import core
 
 @main struct Remind: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -8,8 +9,8 @@ import ArgumentParser
         subcommands: [
             ShowCommand.self,
             ListCommand.self,
-            ShowListsCommand.self,
             AddReminderCommand.self,
+            EditReminderCommand.self,
             CompleteReminderCommand.self,
             DeleteReminderCommand.self,
         ],

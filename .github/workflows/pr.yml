@@ -1,0 +1,17 @@
+name: pr
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup-xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: build
+        run: swift build

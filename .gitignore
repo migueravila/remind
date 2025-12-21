@@ -28,3 +28,6 @@ Package.resolved
 # CLI specific
 *.log
 
+# Claude Code
+.claude/
+CLAUDE.md
