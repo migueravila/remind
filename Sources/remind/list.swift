@@ -5,7 +5,8 @@ import Foundation
 struct ListCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "list",
-        abstract: "Manage reminder lists"
+        abstract: "Manage reminder lists",
+        aliases: ["l"]
     )
 
     @Argument(help: "List name") var name: String?
@@ -70,39 +71,6 @@ struct ListCommand: AsyncParsableCommand {
             let reminders = try await manager.getReminders(from: nil)
             OutputUtils.printLists(lists, reminders: reminders, format: format)
         }
-    }
-
-    private func resolveOutputFormat() -> OutputFormat {
-        if json { return .json }
-        if plain { return .plain }
-        if quiet { return .quiet }
-        return .standard
-    }
-}
-
-struct ShowListsCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "lists",
-        abstract: "Show all reminder lists",
-        aliases: ["l"]
-    )
-
-    @Flag(name: .long, help: "Output as JSON")
-    var json: Bool = false
-
-    @Flag(name: .long, help: "Plain text without colors")
-    var plain: Bool = false
-
-    @Flag(name: .long, help: "Minimal output (count only)")
-    var quiet: Bool = false
-
-    func run() async throws {
-        let manager = Manager()
-        try await manager.requestAccess()
-        let lists = try await manager.getAllLists()
-        let reminders = try await manager.getReminders(from: nil)
-        let format = resolveOutputFormat()
-        OutputUtils.printLists(lists, reminders: reminders, format: format)
     }
 
     private func resolveOutputFormat() -> OutputFormat {

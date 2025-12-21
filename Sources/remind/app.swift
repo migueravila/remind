@@ -9,7 +9,6 @@ import core
         subcommands: [
             ShowCommand.self,
             ListCommand.self,
-            ShowListsCommand.self,
             AddReminderCommand.self,
             EditReminderCommand.self,
             CompleteReminderCommand.self,
