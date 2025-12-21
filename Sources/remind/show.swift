@@ -14,12 +14,29 @@ struct ShowCommand: AsyncParsableCommand {
     )
     var timeFilter: [String] = []
 
+    @Flag(name: .long, help: "Output as JSON")
+    var json: Bool = false
+
+    @Flag(name: .long, help: "Plain text without colors")
+    var plain: Bool = false
+
+    @Flag(name: .long, help: "Minimal output (count only)")
+    var quiet: Bool = false
+
     func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
         let filter = parseTimeFilter(timeFilter)
         let reminders = try await manager.getReminders(filter: filter)
-        OutputUtils.printReminders(reminders)
+        let format = resolveOutputFormat()
+        OutputUtils.printReminders(reminders, format: format)
+    }
+
+    private func resolveOutputFormat() -> OutputFormat {
+        if json { return .json }
+        if plain { return .plain }
+        if quiet { return .quiet }
+        return .standard
     }
 
     private func parseTimeFilter(_ args: [String]) -> ShowOptions {

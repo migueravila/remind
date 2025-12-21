@@ -114,7 +114,59 @@ public enum OutputUtils {
         print("\(cyan(Constants.infoIcon)) \(message)")
     }
 
-    public static func printLists(_ lists: [ReminderList], reminders: [Reminder] = []) {
+    public static func printLists(
+        _ lists: [ReminderList],
+        reminders: [Reminder] = [],
+        format: OutputFormat = .standard
+    ) {
+        switch format {
+        case .json:
+            printListsJSON(lists)
+        case .quiet:
+            print("\(lists.count)")
+        case .plain:
+            printListsPlain(lists, reminders: reminders)
+        case .standard:
+            printListsStandard(lists, reminders: reminders)
+        }
+    }
+
+    public static func printReminders(_ reminders: [Reminder], format: OutputFormat = .standard) {
+        switch format {
+        case .json:
+            printRemindersJSON(reminders)
+        case .quiet:
+            print("\(reminders.count)")
+        case .plain:
+            printRemindersPlain(reminders)
+        case .standard:
+            printRemindersStandard(reminders)
+        }
+    }
+
+    private static func printListsJSON(_ lists: [ReminderList]) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(lists),
+           let json = String(data: data, encoding: .utf8) {
+            print(json)
+        }
+    }
+
+    private static func printListsPlain(_ lists: [ReminderList], reminders: [Reminder]) {
+        guard !lists.isEmpty else {
+            print("No reminder lists found")
+            return
+        }
+        for list in lists {
+            let overdueCount = calculateOverdueCount(for: list, reminders: reminders)
+            let overdueText = overdueCount > 0 ? " (\(overdueCount) overdue)" : ""
+            print("\(list.title) - \(list.reminderCount) tasks\(overdueText)")
+        }
+    }
+
+    private static func printListsStandard(_ lists: [ReminderList], reminders: [Reminder]) {
         guard !lists.isEmpty else {
             print("No reminder lists found")
             return
@@ -139,7 +191,31 @@ public enum OutputUtils {
         }
     }
 
-    public static func printReminders(_ reminders: [Reminder]) {
+    private static func printRemindersJSON(_ reminders: [Reminder]) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let sortedReminders = sortReminders(reminders)
+        if let data = try? encoder.encode(sortedReminders),
+           let json = String(data: data, encoding: .utf8) {
+            print(json)
+        }
+    }
+
+    private static func printRemindersPlain(_ reminders: [Reminder]) {
+        guard !reminders.isEmpty else {
+            print("No reminders found")
+            return
+        }
+        let sortedReminders = sortReminders(reminders)
+        for reminder in sortedReminders {
+            let status = reminder.isCompleted ? "[x]" : "[ ]"
+            let dateStr = reminder.dueDate.map { formatDateForDisplay($0) } ?? "no date"
+            print("\(status) \(reminder.title) | \(reminder.listName ?? "") | \(dateStr)")
+        }
+    }
+
+    private static func printRemindersStandard(_ reminders: [Reminder]) {
         guard !reminders.isEmpty else {
             print("No reminders found")
             return

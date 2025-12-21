@@ -1,6 +1,13 @@
 import Foundation
 
-public struct Reminder: Sendable {
+public enum OutputFormat: String, Sendable {
+    case standard
+    case json
+    case plain
+    case quiet
+}
+
+public struct Reminder: Sendable, Codable {
     public let id: String?
     public let title: String
     public let notes: String?
@@ -27,7 +34,7 @@ public struct Reminder: Sendable {
         self.listName = listName
     }
 
-    public enum Priority: Int, CaseIterable, Sendable {
+    public enum Priority: Int, CaseIterable, Sendable, Codable {
         case none = 0
         case low = 1
         case medium = 5
@@ -44,7 +51,7 @@ public struct Reminder: Sendable {
     }
 }
 
-public struct ReminderList: Sendable {
+public struct ReminderList: Sendable, Codable {
     public let id: String?
     public let title: String
     public let color: String?
