@@ -299,7 +299,6 @@ public enum OutputUtils {
     }
 }
 
-// Cached DateFormatters for performance
 private enum DateFormatters {
     static let weekday: DateFormatter = {
         let f = DateFormatter()

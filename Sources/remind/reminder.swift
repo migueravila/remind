@@ -2,8 +2,6 @@ import ArgumentParser
 import core
 import Foundation
 
-// MARK: - Shared Helper
-
 private func resolveReminderIDs(
     _ inputs: [String],
     examples: [String]
@@ -34,8 +32,6 @@ private func resolveReminderIDs(
 
     return (manager, validIDs)
 }
-
-// MARK: - Commands
 
 struct AddReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(

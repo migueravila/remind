@@ -12,18 +12,15 @@ public enum IDResolver {
     }
 
     private static func resolveID(_ input: String, from reminders: [Reminder]) -> String? {
-        // Try numeric index first (1-based)
         if let index = Int(input), index > 0, index <= reminders.count {
             let sortedReminders = OutputUtils.sortReminders(reminders)
             return sortedReminders[index - 1].id
         }
 
-        // Try exact ID match
         if let reminder = reminders.first(where: { $0.id == input }) {
             return reminder.id
         }
 
-        // Try prefix match (minimum 3 characters)
         if input.count >= Constants.minPrefixLength {
             let matches = reminders.filter { reminder in
                 reminder.id?.lowercased().hasPrefix(input.lowercased()) ?? false
