@@ -112,8 +112,6 @@ struct AddReminderCommand: AsyncParsableCommand {
             nil
         }
 
-        let notes = InputUtils.input(message: "Notes (optional)")
-
         let priorityOptions: [(String, Reminder.Priority)] = [
             ("None", .none),
             ("Low", .low),
@@ -129,7 +127,7 @@ struct AddReminderCommand: AsyncParsableCommand {
         let reminder = Reminder(
             id: nil,
             title: title,
-            notes: notes?.isEmpty == false ? notes : nil,
+            notes: nil,
             isCompleted: false,
             priority: priority,
             dueDate: dueDate,
