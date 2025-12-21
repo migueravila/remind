@@ -60,18 +60,18 @@ public enum InputUtils {
         defaultValue: String? = nil,
         required: Bool = false
     ) -> String? {
-        let prompt = if let defaultValue = defaultValue {
-            "\(message) (\(defaultValue)): "
+        let hint = if let defaultValue = defaultValue {
+            " (\(defaultValue))"
         } else if required {
-            "\(message) (required): "
+            " (required)"
         } else {
-            "\(message): "
+            ""
         }
 
-        print(prompt, terminator: "")
+        print("\(Constants.promptIcon) \(message)\(hint): ", terminator: "")
 
         guard let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines) else {
-            return handleEmptyInput(defaultValue: defaultValue)
+            return handleEmptyInput(message: message, defaultValue: defaultValue)
         }
 
         if input.isEmpty {
@@ -79,30 +79,30 @@ public enum InputUtils {
                 OutputUtils.printError("This field is required.")
                 return self.input(message: message, defaultValue: defaultValue, required: required)
             }
-            return handleEmptyInput(defaultValue: defaultValue)
+            return handleEmptyInput(message: message, defaultValue: defaultValue)
         }
 
-        showSuccessfulInput(input)
+        showSuccessfulInput(message: message, value: input)
         return input
     }
 
     public static func confirm(message: String, defaultValue: Bool = false) -> Bool {
         let defaultText = defaultValue ? "Y/n" : "y/N"
-        print("\(message) (\(defaultText)): ", terminator: "")
+        print("\(Constants.promptIcon) \(message) (\(defaultText)): ", terminator: "")
 
         guard let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased() else {
-            return handleConfirmDefault(defaultValue)
+            return handleConfirmDefault(message: message, defaultValue: defaultValue)
         }
 
         if input.isEmpty {
-            return handleConfirmDefault(defaultValue)
+            return handleConfirmDefault(message: message, defaultValue: defaultValue)
         }
 
         let result = input.starts(with: "y")
         let resultText = result ? "yes" : "no"
         Terminal.clearPreviousLine()
-        print("\(OutputUtils.green(Constants.successIcon)) \(OutputUtils.dim(resultText))")
+        print("\(OutputUtils.green(Constants.successIcon)) \(message): \(OutputUtils.dim(resultText))")
         return result
     }
 
@@ -125,25 +125,25 @@ public enum InputUtils {
         return isatty(STDIN_FILENO) == 1 && isatty(STDOUT_FILENO) == 1
     }
 
-    private static func handleEmptyInput(defaultValue: String?) -> String? {
+    private static func handleEmptyInput(message: String, defaultValue: String?) -> String? {
         if let defaultValue = defaultValue, !defaultValue.isEmpty {
             Terminal.clearPreviousLine()
-            print("\(OutputUtils.green(Constants.successIcon)) \(OutputUtils.dim(defaultValue))")
+            print("\(OutputUtils.green(Constants.successIcon)) \(message): \(OutputUtils.dim(defaultValue))")
             return defaultValue
         }
         Terminal.clearPreviousLine()
         return nil
     }
 
-    private static func showSuccessfulInput(_ input: String) {
+    private static func showSuccessfulInput(message: String, value: String) {
         Terminal.clearPreviousLine()
-        print("\(OutputUtils.green(Constants.successIcon)) \(OutputUtils.dim(input))")
+        print("\(OutputUtils.green(Constants.successIcon)) \(message): \(OutputUtils.dim(value))")
     }
 
-    private static func handleConfirmDefault(_ defaultValue: Bool) -> Bool {
+    private static func handleConfirmDefault(message: String, defaultValue: Bool) -> Bool {
         let result = defaultValue ? "yes" : "no"
         Terminal.clearPreviousLine()
-        print("\(OutputUtils.green(Constants.successIcon)) \(OutputUtils.dim(result))")
+        print("\(OutputUtils.green(Constants.successIcon)) \(message): \(OutputUtils.dim(result))")
         return defaultValue
     }
 
@@ -214,9 +214,9 @@ public enum InputUtils {
             var lineCount = 0
 
             if searchQuery.isEmpty {
-                print(message)
+                print("\(Constants.promptIcon) \(message)")
             } else {
-                print("\(message) \(OutputUtils.green(searchQuery))")
+                print("\(Constants.promptIcon) \(message) \(OutputUtils.green(searchQuery))")
             }
             lineCount += 1
 
@@ -272,7 +272,7 @@ public enum InputUtils {
                 guard !filteredOptions.isEmpty else { continue }
                 clearRenderedLines(lastRenderedLines)
                 print(
-                    "\(OutputUtils.green(Constants.successIcon)) " +
+                    "\(OutputUtils.green(Constants.successIcon)) \(message): " +
                     "\(OutputUtils.dim(filteredOptions[selectedIndex].0))"
                 )
                 return filteredOptions[selectedIndex].1
@@ -337,7 +337,7 @@ public enum InputUtils {
 
             var lineCount = 0
 
-            print(message)
+            print("\(Constants.promptIcon) \(message)")
             lineCount += 1
 
             print("> \(OutputUtils.cyan(formatter.string(from: selectedDate)))")
@@ -392,7 +392,7 @@ public enum InputUtils {
                 }
 
                 print(
-                    "\(OutputUtils.green(Constants.successIcon)) " +
+                    "\(OutputUtils.green(Constants.successIcon)) \(message): " +
                     "\(OutputUtils.dim(formatter.string(from: selectedDate)))"
                 )
                 return selectedDate

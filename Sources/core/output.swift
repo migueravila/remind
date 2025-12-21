@@ -10,6 +10,7 @@ enum Constants {
     static let errorIcon = "✗"
     static let warningIcon = "⚠"
     static let infoIcon = "ℹ"
+    static let promptIcon = "➤"
 
     static let bullet = "›"
     static let arrow = "›"
