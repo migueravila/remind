@@ -194,6 +194,71 @@ public class Manager {
         try eventStore.save(ekReminder, commit: true)
     }
 
+    public func updateReminder(
+        id: String,
+        title: String? = nil,
+        notes: String? = nil,
+        priority: Reminder.Priority? = nil,
+        dueDate: Date?? = nil,
+        listName: String? = nil
+    ) async throws {
+        let allCalendars = eventStore.calendars(for: .reminder)
+        let predicate = eventStore.predicateForReminders(in: allCalendars)
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.eventStore.fetchReminders(matching: predicate) { ekReminders in
+                guard let reminders = ekReminders,
+                      let ekReminder = reminders.first(where: {
+                          $0.calendarItemIdentifier == id
+                      })
+                else {
+                    continuation.resume(throwing: ProgramError.reminderNotFound)
+                    return
+                }
+
+                if let title = title {
+                    ekReminder.title = title
+                }
+
+                if let notes = notes {
+                    ekReminder.notes = notes.isEmpty ? nil : notes
+                }
+
+                if let priority = priority {
+                    ekReminder.priority = priority.rawValue
+                }
+
+                if let dueDateValue = dueDate {
+                    if let date = dueDateValue {
+                        ekReminder.dueDateComponents = Calendar.current.dateComponents(
+                            [.year, .month, .day, .hour, .minute], from: date
+                        )
+                    } else {
+                        ekReminder.dueDateComponents = nil
+                    }
+                }
+
+                if let listName = listName {
+                    let calendars = self.eventStore.calendars(for: .reminder).filter {
+                        $0.title == listName
+                    }
+                    if let calendar = calendars.first {
+                        ekReminder.calendar = calendar
+                    }
+                }
+
+                do {
+                    try self.eventStore.save(ekReminder, commit: true)
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to update reminder"
+                    ))
+                }
+            }
+        }
+    }
+
     public func completeReminders(ids: [String]) async throws {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
