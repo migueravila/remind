@@ -10,18 +10,16 @@ struct ListCommand: AsyncParsableCommand {
     )
 
     @Argument(help: "List name") var name: String?
-    @Option(
-        name: [.short, .customLong("delete")],
-        help: "Delete a list"
-    ) var delete: String?
+
     @Option(
         name: [.short, .customLong("rename")],
-        help: "Rename a list (provide old name)"
+        help: "New name to rename the list to"
     ) var rename: String?
-    @Argument(
-        parsing: .remaining,
-        help: "New name for rename operation"
-    ) var remainingArgs: [String] = []
+
+    @Flag(
+        name: [.short, .customLong("delete")],
+        help: "Delete the list"
+    ) var delete: Bool = false
 
     @Flag(name: .long, help: "Output as JSON")
     var json: Bool = false
@@ -36,20 +34,23 @@ struct ListCommand: AsyncParsableCommand {
         let manager = Manager()
         try await manager.requestAccess()
 
-        if let deleteListName = delete {
-            try await manager.deleteList(name: deleteListName)
-            OutputUtils.printSuccess("Deleted list: \(deleteListName)")
+        if delete {
+            guard let listName = name else {
+                OutputUtils.printError("List name required for delete operation")
+                return
+            }
+            try await manager.deleteList(name: listName)
+            OutputUtils.printSuccess("Deleted list: \(listName)")
             return
         }
 
-        if let oldName = rename {
-            guard let newName = remainingArgs.first else {
-                OutputUtils.printError("New name required for rename operation")
+        if let newName = rename {
+            guard let oldName = name else {
+                OutputUtils.printError("List name required for rename operation")
                 return
             }
             try await manager.renameList(oldName: oldName, newName: newName)
-            OutputUtils
-                .printSuccess("Renamed list '\(oldName)' to '\(newName)'")
+            OutputUtils.printSuccess("Renamed list '\(oldName)' to '\(newName)'")
             return
         }
 
