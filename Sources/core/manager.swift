@@ -77,7 +77,9 @@ public class Manager {
         try eventStore.saveCalendar(calendar, commit: true)
     }
 
-    public func getReminders(from listName: String? = nil) async throws -> [Reminder] {
+    public func getReminders(from listName: String? = nil) async throws
+        -> [Reminder]
+    {
         let calendars: [EKCalendar]
 
         if let listName {
@@ -131,26 +133,9 @@ public class Manager {
                     && reminder.dueDate
                     .map { calendar.isDateInTomorrow($0) } ?? false
             }
-        case .thisWeek:
-            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?
-                .start ?? now
-            let endOfWeek = calendar.dateInterval(of: .weekOfYear, for: now)?
-                .end ?? now
-            return allReminders.filter { reminder in
-                !reminder.isCompleted
-                    && reminder.dueDate.map { dueDate in
-                        dueDate >= startOfWeek && dueDate <= endOfWeek
-                    } ?? false
-            }
-        case .overdue:
-            return allReminders.filter { reminder in
-                !reminder.isCompleted
-                    && reminder.dueDate
-                    .map { $0 < calendar.startOfDay(for: now) } ?? false
-            }
         case .flagged:
-            return allReminders.filter { reminder in
-                !reminder.isCompleted && reminder.priority != .none
+            return allReminders.filter {
+                !$0.isCompleted && $0.priority != .none
             }
         case .upcoming:
             return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }
@@ -158,6 +143,10 @@ public class Manager {
                     ($0.dueDate ?? Date.distantFuture) <
                         ($1.dueDate ?? Date.distantFuture)
                 }
+        case .completed:
+            return allReminders.filter(\.isCompleted)
+        case .all:
+            return allReminders.filter { !$0.isCompleted }
         case let .specificDate(date):
             return allReminders.filter { reminder in
                 !reminder.isCompleted
@@ -205,7 +194,12 @@ public class Manager {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        try await withCheckedThrowingContinuation { (
+            continuation: CheckedContinuation<
+                Void,
+                Error
+            >
+        ) in
             self.eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders,
                       let ekReminder = reminders.first(where: {
@@ -230,18 +224,21 @@ public class Manager {
 
                 if let dueDateValue = dueDate {
                     if let date = dueDateValue {
-                        ekReminder.dueDateComponents = Calendar.current.dateComponents(
-                            [.year, .month, .day, .hour, .minute], from: date
-                        )
+                        ekReminder.dueDateComponents = Calendar.current
+                            .dateComponents(
+                                [.year, .month, .day, .hour, .minute],
+                                from: date
+                            )
                     } else {
                         ekReminder.dueDateComponents = nil
                     }
                 }
 
                 if let listName = listName {
-                    let calendars = self.eventStore.calendars(for: .reminder).filter {
-                        $0.title == listName
-                    }
+                    let calendars = self.eventStore.calendars(for: .reminder)
+                        .filter {
+                            $0.title == listName
+                        }
                     if let calendar = calendars.first {
                         ekReminder.calendar = calendar
                     }
@@ -263,7 +260,12 @@ public class Manager {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        try await withCheckedThrowingContinuation { (
+            continuation: CheckedContinuation<
+                Void,
+                Error
+            >
+        ) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
@@ -285,9 +287,10 @@ public class Manager {
                 do {
                     try self.eventStore.commit()
                     if failedCount > 0 {
-                        continuation.resume(throwing: ProgramError.operationFailed(
-                            "Failed to complete \(failedCount) reminder(s)"
-                        ))
+                        continuation
+                            .resume(throwing: ProgramError.operationFailed(
+                                "Failed to complete \(failedCount) reminder(s)"
+                            ))
                     } else {
                         continuation.resume()
                     }
@@ -304,7 +307,12 @@ public class Manager {
         let allCalendars = eventStore.calendars(for: .reminder)
         let predicate = eventStore.predicateForReminders(in: allCalendars)
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        try await withCheckedThrowingContinuation { (
+            continuation: CheckedContinuation<
+                Void,
+                Error
+            >
+        ) in
             eventStore.fetchReminders(matching: predicate) { ekReminders in
                 guard let reminders = ekReminders else {
                     continuation.resume()
@@ -325,11 +333,60 @@ public class Manager {
                 do {
                     try self.eventStore.commit()
                     if failedCount > 0 {
-                        continuation.resume(throwing: ProgramError.operationFailed(
-                            "Failed to delete \(failedCount) reminder(s)"
-                        ))
+                        continuation
+                            .resume(throwing: ProgramError.operationFailed(
+                                "Failed to delete \(failedCount) reminder(s)"
+                            ))
                     } else {
                         continuation.resume()
+                    }
+                } catch {
+                    continuation.resume(throwing: ProgramError.operationFailed(
+                        "Failed to save changes"
+                    ))
+                }
+            }
+        }
+    }
+
+    public func cleanCompleted(in listName: String? = nil) async throws -> Int {
+        let calendars: [EKCalendar]
+        if let listName {
+            calendars = eventStore.calendars(for: .reminder).filter {
+                $0.title == listName
+            }
+            if calendars.isEmpty { throw ProgramError.listNotFound }
+        } else {
+            calendars = eventStore.calendars(for: .reminder)
+        }
+
+        return try await withCheckedThrowingContinuation { (
+            continuation: CheckedContinuation<Int, Error>
+        ) in
+            let predicate = eventStore.predicateForReminders(in: calendars)
+            eventStore.fetchReminders(matching: predicate) { ekReminders in
+                let completed = (ekReminders ?? []).filter(\.isCompleted)
+
+                var deletedCount = 0
+                var failedCount = 0
+                for reminder in completed {
+                    do {
+                        try self.eventStore.remove(reminder, commit: false)
+                        deletedCount += 1
+                    } catch {
+                        failedCount += 1
+                    }
+                }
+
+                do {
+                    try self.eventStore.commit()
+                    if failedCount > 0 {
+                        continuation
+                            .resume(throwing: ProgramError.operationFailed(
+                                "Failed to clean \(failedCount) reminder(s)"
+                            ))
+                    } else {
+                        continuation.resume(returning: deletedCount)
                     }
                 } catch {
                     continuation.resume(throwing: ProgramError.operationFailed(
