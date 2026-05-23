@@ -2,12 +2,36 @@ import ArgumentParser
 import core
 import Foundation
 
+private func resolveList(
+    manager: Manager,
+    explicit: String?
+) async throws -> String? {
+    if let explicit { return explicit }
+
+    if case let .list(name) = ViewStateStore.load()?.spec {
+        return name
+    }
+
+    let config = Config.load()
+    if let defaultList = config.defaultList { return defaultList }
+
+    let available = try await manager.getAllLists()
+    guard !available.isEmpty else {
+        OutputUtils.printError("No lists available. Create a list first.")
+        return nil
+    }
+    let options = available.map { ($0.title, $0.title) }
+    return InputUtils.select(message: "Select a list:", options: options)
+}
+
 private func resolveReminderIDs(
     _ inputs: [String],
+    listScope: String?,
     examples: [String]
 ) async throws -> (manager: Manager, ids: [String])? {
     guard !inputs.isEmpty else {
-        OutputUtils.printError("Please provide at least one reminder number or ID")
+        OutputUtils
+            .printError("Please provide at least one reminder number or ID")
         print("Examples:")
         examples.forEach { print($0) }
         return nil
@@ -15,12 +39,22 @@ private func resolveReminderIDs(
 
     let manager = Manager()
     try await manager.requestAccess()
-    let allReminders = try await manager.getReminders(from: nil)
-    let validIDs = IDResolver.resolveIDs(inputs, from: allReminders)
+    let reminders = try await manager.getReminders(from: listScope)
+
+    let validIDs: [String]
+    if listScope == nil, let state = ViewStateStore.load() {
+        validIDs = IDResolver.resolveIDs(
+            inputs,
+            snapshot: state.ids,
+            reminders: reminders
+        )
+    } else {
+        validIDs = IDResolver.resolveIDs(inputs, from: reminders)
+    }
 
     guard !validIDs.isEmpty else {
         OutputUtils.printError("No valid reminder numbers or IDs found")
-        print("Use 'remind show' to see available reminders with their numbers")
+        print("Use a view command to see reminders with their numbers")
         return nil
     }
 
@@ -33,22 +67,32 @@ private func resolveReminderIDs(
     return (manager, validIDs)
 }
 
+private func parsePriority(_ input: String?) -> Reminder.Priority {
+    guard let input = input?.lowercased() else { return .none }
+    switch input {
+    case "low", "l": return .low
+    case "medium", "med", "m": return .medium
+    case "high", "h": return .high
+    default: return .none
+    }
+}
+
 struct AddReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "add",
-        abstract: "Add a new reminder",
+        abstract: "Add one or more reminders",
         aliases: ["a"]
     )
 
-    @Argument(parsing: .remaining, help: "Reminder description")
-    var description: [String] = []
+    @Argument(parsing: .remaining, help: "Reminder title(s)")
+    var titles: [String] = []
 
     @Option(name: .shortAndLong, help: "List name")
     var list: String?
 
     @Option(
         name: .shortAndLong,
-        help: "Due date (YYYY-MM-DD, 'today', 'tomorrow', etc.)"
+        help: "Due date (DD-MM-YY, 'today', 'tomorrow')"
     )
     var due: String?
 
@@ -61,16 +105,11 @@ struct AddReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Add notes")
     var notes: String?
 
-    @Flag(name: .long, help: "Disable interactive mode")
-    var noInteractive: Bool = false
-
     func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
 
-        let interactive = !noInteractive && description.isEmpty
-
-        if interactive {
+        if titles.isEmpty {
             try await runInteractive(manager: manager)
         } else {
             try await runDirect(manager: manager)
@@ -86,16 +125,9 @@ struct AddReminderCommand: AsyncParsableCommand {
             return
         }
 
-        let availableLists = try await manager.getAllLists()
-        guard !availableLists.isEmpty else {
-            OutputUtils.printError("No lists available. Create a list first.")
-            return
-        }
-
-        let listOptions = availableLists.map { ($0.title, $0.title) }
-        guard let selectedList = InputUtils.select(
-            message: "Select a list:",
-            options: listOptions
+        guard let targetList = try await resolveList(
+            manager: manager,
+            explicit: list
         ) else {
             OutputUtils.printError("No list selected")
             return
@@ -118,43 +150,39 @@ struct AddReminderCommand: AsyncParsableCommand {
             ("Medium", .medium),
             ("High", .high)
         ]
-
-        let priority = InputUtils.select(
+        let selectedPriority = InputUtils.select(
             message: "Select priority:",
             options: priorityOptions
         ) ?? .none
+
+        let flagged = InputUtils.confirm(
+            message: "Flag this reminder?",
+            defaultValue: false
+        )
+
+        let effectivePriority: Reminder.Priority = flagged &&
+            selectedPriority == .none ? .high : selectedPriority
 
         let reminder = Reminder(
             id: nil,
             title: title,
             notes: nil,
             isCompleted: false,
-            priority: priority,
+            priority: effectivePriority,
             dueDate: dueDate,
-            listName: selectedList
+            listName: targetList
         )
 
-        try await manager.createReminder(reminder, in: selectedList)
+        try await manager.createReminder(reminder, in: targetList)
         OutputUtils.printSuccess("Added reminder: \(title)")
     }
 
     private func runDirect(manager: Manager) async throws {
-        let title = description.joined(separator: " ")
-        let config = Config.load()
-
-        let targetList: String
-        if let list {
-            targetList = list
-        } else if let defaultList = config.defaultList {
-            targetList = defaultList
-        } else {
-            let availableLists = try await manager.getAllLists()
-            guard let firstList = availableLists.first else {
-                OutputUtils
-                    .printError("No lists available. Create a list first.")
-                return
-            }
-            targetList = firstList.title
+        guard let targetList = try await resolveList(
+            manager: manager,
+            explicit: list
+        ) else {
+            return
         }
 
         let dueDate: Date? = if let due {
@@ -164,29 +192,31 @@ struct AddReminderCommand: AsyncParsableCommand {
         }
 
         let parsedPriority = parsePriority(priority)
-
-        let reminder = Reminder(
-            id: nil,
-            title: title,
-            notes: notes,
-            isCompleted: false,
-            priority: flag ? .high : parsedPriority,
-            dueDate: dueDate,
-            listName: targetList
-        )
-
-        try await manager.createReminder(reminder, in: targetList)
-        OutputUtils.printSuccess("Added reminder: \(title)")
-    }
-
-    private func parsePriority(_ input: String?) -> Reminder.Priority {
-        guard let input = input?.lowercased() else { return .none }
-        switch input {
-        case "low", "l": return .low
-        case "medium", "med", "m": return .medium
-        case "high", "h": return .high
-        default: return .none
+        let effectivePriority: Reminder.Priority = if priority != nil {
+            parsedPriority
+        } else if flag {
+            .high
+        } else {
+            .none
         }
+
+        for title in titles {
+            let reminder = Reminder(
+                id: nil,
+                title: title,
+                notes: notes,
+                isCompleted: false,
+                priority: effectivePriority,
+                dueDate: dueDate,
+                listName: targetList
+            )
+            try await manager.createReminder(reminder, in: targetList)
+        }
+
+        let message = titles.count == 1
+            ? "Added reminder: \(titles[0])"
+            : "Added \(titles.count) reminders to \(targetList)"
+        OutputUtils.printSuccess(message)
     }
 }
 
@@ -194,23 +224,30 @@ struct CompleteReminderCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "complete",
         abstract: "Mark one or more reminders as complete",
-        aliases: ["c", "done"]
+        aliases: ["c"]
     )
 
     @Argument(
         parsing: .remaining,
         help: "Reminder number(s) or ID(s) to complete"
     )
-    var inputs: [String]
+    var inputs: [String] = []
+
+    @Option(name: .shortAndLong, help: "Scope ID resolution to this list")
+    var list: String?
 
     func run() async throws {
         let examples = [
-            "  remind complete 1        # Complete reminder [1]",
-            "  remind complete 1 2 3    # Complete multiple reminders",
-            "  remind complete 4A83     # Complete by partial ID"
+            "  remind done 1        # Complete reminder [1]",
+            "  remind done 1 2 3    # Complete multiple reminders",
+            "  remind done 4A83     # Complete by partial ID"
         ]
 
-        guard let result = try await resolveReminderIDs(inputs, examples: examples) else {
+        guard let result = try await resolveReminderIDs(
+            inputs,
+            listScope: list,
+            examples: examples
+        ) else {
             return
         }
 
@@ -232,11 +269,14 @@ struct EditReminderCommand: AsyncParsableCommand {
     @Argument(help: "Reminder number or ID")
     var input: String
 
+    @Option(name: .customLong("list"), help: "Scope ID resolution to this list")
+    var listScope: String?
+
     @Option(name: .shortAndLong, help: "New title")
     var title: String?
 
-    @Option(name: .shortAndLong, help: "Move to different list")
-    var list: String?
+    @Option(name: .customLong("move-to"), help: "Move to a different list")
+    var moveTo: String?
 
     @Option(name: .shortAndLong, help: "New due date")
     var due: String?
@@ -247,38 +287,67 @@ struct EditReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "New notes")
     var notes: String?
 
+    @Flag(name: .shortAndLong, help: "Toggle flag (set flagged)")
+    var flag: Bool = false
+
+    @Flag(name: .long, help: "Unset the flag")
+    var unflag: Bool = false
+
     func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
 
-        let allReminders = try await manager.getReminders(from: nil)
-        let resolvedIDs = IDResolver.resolveIDs([input], from: allReminders)
+        let reminders = try await manager.getReminders(from: listScope)
 
-        guard let id = resolvedIDs.first else {
+        let resolved: [String] = if listScope == nil,
+                                    let state = ViewStateStore.load()
+        {
+            IDResolver.resolveIDs(
+                [input],
+                snapshot: state.ids,
+                reminders: reminders
+            )
+        } else {
+            IDResolver.resolveIDs([input], from: reminders)
+        }
+
+        guard let id = resolved.first else {
             OutputUtils.printError("Reminder not found: \(input)")
             return
         }
 
-        guard let reminder = allReminders.first(where: { $0.id == id }) else {
+        guard let reminder = reminders.first(where: { $0.id == id }) else {
             OutputUtils.printError("Reminder not found")
             return
         }
 
-        let hasFlags = title != nil || list != nil || due != nil ||
-                       priority != nil || notes != nil
+        let hasFlags = title != nil || moveTo != nil || due != nil ||
+            priority != nil || notes != nil || flag || unflag
 
         if hasFlags {
             try await runDirect(manager: manager, id: id)
         } else {
-            try await runInteractive(manager: manager, id: id, current: reminder)
+            try await runInteractive(
+                manager: manager,
+                id: id,
+                current: reminder
+            )
         }
     }
 
     private func runDirect(manager: Manager, id: String) async throws {
-        let parsedPriority: Reminder.Priority? = if let priority {
+        var parsedPriority: Reminder.Priority? = if let priority {
             parsePriority(priority)
         } else {
             nil
+        }
+
+        if parsedPriority == nil {
+            if unflag {
+                parsedPriority = Reminder.Priority.none
+            } else if flag {
+                parsedPriority = .high
+            }
         }
 
         let parsedDue: Date?? = if let due {
@@ -293,7 +362,7 @@ struct EditReminderCommand: AsyncParsableCommand {
             notes: notes,
             priority: parsedPriority,
             dueDate: parsedDue,
-            listName: list
+            listName: moveTo
         )
 
         OutputUtils.printSuccess("Updated reminder")
@@ -367,15 +436,6 @@ struct EditReminderCommand: AsyncParsableCommand {
 
         OutputUtils.printSuccess("Updated reminder: \(newTitle)")
     }
-
-    private func parsePriority(_ input: String) -> Reminder.Priority {
-        switch input.lowercased() {
-        case "low", "l": return .low
-        case "medium", "med", "m": return .medium
-        case "high", "h": return .high
-        default: return .none
-        }
-    }
 }
 
 struct DeleteReminderCommand: AsyncParsableCommand {
@@ -389,7 +449,10 @@ struct DeleteReminderCommand: AsyncParsableCommand {
         parsing: .remaining,
         help: "Reminder number(s) or ID(s) to delete"
     )
-    var inputs: [String]
+    var inputs: [String] = []
+
+    @Option(name: .shortAndLong, help: "Scope ID resolution to this list")
+    var list: String?
 
     @Flag(
         name: [.customShort("y"), .customLong("force")],
@@ -404,7 +467,11 @@ struct DeleteReminderCommand: AsyncParsableCommand {
             "  remind delete 4A83       # Delete by partial ID"
         ]
 
-        guard let result = try await resolveReminderIDs(inputs, examples: examples) else {
+        guard let result = try await resolveReminderIDs(
+            inputs,
+            listScope: list,
+            examples: examples
+        ) else {
             return
         }
 

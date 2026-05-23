@@ -15,3 +15,14 @@ jobs:
 
       - name: build
         run: swift build
+
+  format:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install-swiftformat
+        run: brew install swiftformat
+
+      - name: format-check
+        run: swiftformat --lint --config .format Sources/

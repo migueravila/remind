@@ -16,6 +16,10 @@ public struct Reminder: Sendable, Codable {
     public let dueDate: Date?
     public let listName: String?
 
+    public var isFlagged: Bool {
+        priority != .none
+    }
+
     public init(
         id: String?,
         title: String,
@@ -90,12 +94,40 @@ public enum ProgramError: LocalizedError {
     }
 }
 
-public enum ShowOptions {
+public enum ShowOptions: Sendable, Equatable {
     case today
     case tomorrow
-    case thisWeek
-    case overdue
-    case flagged
     case upcoming
+    case flagged
+    case completed
+    case all
     case specificDate(Date)
+}
+
+public enum ViewSpec: Sendable, Codable, Equatable {
+    case list(name: String)
+    case lists
+    case filter(Filter)
+
+    public enum Filter: Sendable, Codable, Equatable {
+        case today
+        case tomorrow
+        case upcoming
+        case flagged
+        case completed
+        case all
+        case specificDate(Date)
+    }
+}
+
+public struct ViewState: Sendable, Codable {
+    public let spec: ViewSpec
+    public let ids: [String]
+    public let updatedAt: Date
+
+    public init(spec: ViewSpec, ids: [String], updatedAt: Date = Date()) {
+        self.spec = spec
+        self.ids = ids
+        self.updatedAt = updatedAt
+    }
 }
