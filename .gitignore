@@ -28,6 +28,7 @@ Package.resolved
 # CLI specific
 *.log
 
-# Claude Code
+# Claude Code / OpenCode
 .claude/
 CLAUDE.md
+AGENTS.md
