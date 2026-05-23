@@ -2,82 +2,110 @@ import ArgumentParser
 import core
 import Foundation
 
-struct ListCommand: AsyncParsableCommand {
+struct CloseCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "list",
-        abstract: "Manage reminder lists",
-        aliases: ["l"]
+        commandName: "close",
+        abstract: "Close (delete) a list and all its reminders"
     )
 
-    @Argument(help: "List name") var name: String?
-
-    @Option(
-        name: [.short, .customLong("rename")],
-        help: "New name to rename the list to"
-    ) var rename: String?
+    @Argument(help: "List name to close")
+    var name: String
 
     @Flag(
-        name: [.short, .customLong("delete")],
-        help: "Delete the list"
-    ) var delete: Bool = false
-
-    @Flag(name: .long, help: "Output as JSON")
-    var json: Bool = false
-
-    @Flag(name: .long, help: "Plain text without colors")
-    var plain: Bool = false
-
-    @Flag(name: .long, help: "Minimal output (count only)")
-    var quiet: Bool = false
+        name: [.customShort("y"), .customLong("force")],
+        help: "Skip confirmation prompt"
+    )
+    var force: Bool = false
 
     func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
 
-        if delete {
-            guard let listName = name else {
-                OutputUtils.printError("List name required for delete operation")
+        let shouldConfirm = !force && Config.load().confirmDelete
+        if shouldConfirm {
+            let ok = InputUtils.confirm(
+                message: "Close list '\(name)' and delete all its reminders?",
+                defaultValue: false
+            )
+            guard ok else {
+                OutputUtils.printInfo("Cancelled")
                 return
             }
-            try await manager.deleteList(name: listName)
-            OutputUtils.printSuccess("Deleted list: \(listName)")
-            return
         }
 
-        if let newName = rename {
-            guard let oldName = name else {
-                OutputUtils.printError("List name required for rename operation")
-                return
-            }
-            try await manager.renameList(oldName: oldName, newName: newName)
-            OutputUtils.printSuccess("Renamed list '\(oldName)' to '\(newName)'")
-            return
-        }
-
-        let format = resolveOutputFormat()
-
-        if let listName = name {
-            let lists = try await manager.getAllLists()
-            let listExists = lists.contains { $0.title == listName }
-
-            if listExists {
-                let reminders = try await manager.getReminders(from: listName)
-                OutputUtils.printReminders(reminders, format: format)
-            } else {
-                let list = try await manager.createList(name: listName)
-                OutputUtils.printSuccess("Created list: \(list.title)")
-            }
-        } else {
-            let lists = try await manager.getAllLists()
-            let reminders = try await manager.getReminders(from: nil)
-            OutputUtils.printLists(lists, reminders: reminders, format: format)
-        }
+        try await manager.deleteList(name: name)
+        OutputUtils.printSuccess("Closed list: \(name)")
     }
+}
 
-    private func resolveOutputFormat() -> OutputFormat {
-        if json { return .json }
-        if plain { return .plain }
-        if quiet { return .quiet }
-        return .standard
+struct RenameCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "rename",
+        abstract: "Rename a list"
+    )
+
+    @Argument(help: "Current list name") var oldName: String
+    @Argument(help: "New list name") var newName: String
+
+    func run() async throws {
+        let manager = Manager()
+        try await manager.requestAccess()
+
+        if ArgDispatcher.isReserved(newName) {
+            OutputUtils.printError(
+                "'\(newName)' is a reserved name and cannot be used as a list name"
+            )
+            return
+        }
+
+        try await manager.renameList(oldName: oldName, newName: newName)
+        OutputUtils.printSuccess("Renamed list '\(oldName)' to '\(newName)'")
+    }
+}
+
+struct CleanCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "clean",
+        abstract: "Delete all completed reminders"
+    )
+
+    @Option(name: .shortAndLong, help: "Clean only this list")
+    var list: String?
+
+    @Flag(
+        name: [.customShort("y"), .customLong("force")],
+        help: "Skip confirmation prompt"
+    )
+    var force: Bool = false
+
+    func run() async throws {
+        let manager = Manager()
+        try await manager.requestAccess()
+
+        let all = try await manager.getReminders(from: list)
+        let completed = all.filter(\.isCompleted)
+
+        guard !completed.isEmpty else {
+            OutputUtils.printInfo("No completed reminders to clean")
+            return
+        }
+
+        let scope = list.map { "in list '\($0)'" } ?? "across all lists"
+        let shouldConfirm = !force && Config.load().confirmDelete
+        if shouldConfirm {
+            let ok = InputUtils.confirm(
+                message: "Delete \(completed.count) completed reminder(s) \(scope)?",
+                defaultValue: false
+            )
+            guard ok else {
+                OutputUtils.printInfo("Cancelled")
+                return
+            }
+        }
+
+        let deleted = try await manager.cleanCompleted(in: list)
+        OutputUtils.printSuccess(
+            "Cleaned \(deleted) completed reminder(s)"
+        )
     }
 }
