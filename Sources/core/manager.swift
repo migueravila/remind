@@ -127,7 +127,7 @@ public class Manager {
                         .map { $0 < calendar.startOfDay(for: now) } ??
                         false)
             }
-         case .tomorrow:
+        case .tomorrow:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate
