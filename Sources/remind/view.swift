@@ -11,7 +11,7 @@ struct ShowCommand: AsyncParsableCommand {
 
     @Argument(
         parsing: .remaining,
-        help: "Filter (today, tomorrow, upcoming, flag, done, all, or DD-MM-YY)"
+        help: "Filter (today, tomorrow, upcoming, done, all, or DD-MM-YY)"
     )
     var timeFilter: [String] = []
 
@@ -88,7 +88,6 @@ struct ShowCommand: AsyncParsableCommand {
         case "today": return .today
         case "tomorrow": return .tomorrow
         case "upcoming": return .upcoming
-        case "flag": return .flagged
         case "done": return .completed
         case "all": return .all
         default:
@@ -120,7 +119,6 @@ struct ShowCommand: AsyncParsableCommand {
         case .today: .today
         case .tomorrow: .tomorrow
         case .upcoming: .upcoming
-        case .flagged: .flagged
         case .completed: .completed
         case .all: .all
         case let .specificDate(date): .specificDate(date)

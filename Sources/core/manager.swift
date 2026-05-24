@@ -133,10 +133,6 @@ public class Manager {
                     && reminder.dueDate
                     .map { calendar.isDateInTomorrow($0) } ?? false
             }
-        case .flagged:
-            return allReminders.filter {
-                !$0.isCompleted && $0.priority != .none
-            }
         case .upcoming:
             return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }
                 .sorted {

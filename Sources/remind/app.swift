@@ -6,7 +6,7 @@ import Foundation
     static let configuration = CommandConfiguration(
         commandName: "remind",
         abstract: "Apple Reminders for terminal natives",
-        version: "1.0.0",
+        version: HelpRenderer.version,
         subcommands: [
             ShowCommand.self,
             ListsCommand.self,
@@ -17,12 +17,19 @@ import Foundation
             CloseCommand.self,
             RenameCommand.self,
             CleanCommand.self,
+            HelpCommand.self,
         ],
         defaultSubcommand: ShowCommand.self
     )
 
     static func main() async {
         let rawArgs = Array(CommandLine.arguments.dropFirst())
+
+        if shouldShowHelp(rawArgs) {
+            HelpRenderer.render()
+            return
+        }
+
         let args = ArgDispatcher.rewrite(rawArgs)
         do {
             let command = try parseAsRoot(args)
@@ -35,6 +42,13 @@ import Foundation
         } catch {
             exit(withError: error)
         }
+    }
+
+    private static func shouldShowHelp(_ args: [String]) -> Bool {
+        guard let first = args.first else { return false }
+        let lowerFirst = first.lowercased()
+        return lowerFirst == "help" || lowerFirst == "--help"
+            || lowerFirst == "-h"
     }
 }
 
@@ -61,7 +75,6 @@ enum ArgDispatcher {
         "today",
         "tomorrow",
         "upcoming",
-        "flag",
         "done",
         "all",
     ]
