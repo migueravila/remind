@@ -89,47 +89,6 @@ enum HelpRenderer {
                 ("remind --version, -v", "Show version"),
             ]
         ),
-        (
-            "EXAMPLES",
-            [
-                (
-                    "remind",
-                    "# today's reminders"
-                ),
-                (
-                    "remind Work",
-                    "# reminders in \"Work\""
-                ),
-                (
-                    "remind Work add \"ship it\"",
-                    "# add to \"Work\""
-                ),
-                (
-                    "remind add \"buy milk\" -d tomorrow -f",
-                    ""
-                ),
-                (
-                    "remind edit 1 -t \"buy milk and bread\"",
-                    ""
-                ),
-                (
-                    "remind done",
-                    "# show completed"
-                ),
-                (
-                    "remind done 1 2 3",
-                    "# complete by id"
-                ),
-                (
-                    "remind delete 4A83",
-                    "# delete by partial id"
-                ),
-                (
-                    "remind clean Work -y",
-                    "# purge completed in \"Work\""
-                ),
-            ]
-        ),
     ]
 
     static func render() {
