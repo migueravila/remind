@@ -24,21 +24,19 @@ enum HelpRenderer {
     private static let subtitle =
         "Apple Reminders for terminal natives  v\(version)"
 
-    static func render() {
-        printBanner()
-        printBlank()
-        printSection(
-            title: "USAGE",
-            entries: [
+    private static let allSections: [(String, [(String, String)])] = [
+        (
+            "USAGE",
+            [
                 (
                     "remind [list] [command] [arguments] [flags]",
                     ""
                 )
             ]
-        )
-        printSection(
-            title: "FILTERS",
-            entries: [
+        ),
+        (
+            "FILTERS",
+            [
                 ("remind", "Show today's reminders (default)"),
                 ("remind today", "Show today's reminders"),
                 ("remind tomorrow", "Show tomorrow's reminders"),
@@ -47,10 +45,10 @@ enum HelpRenderer {
                 ("remind done", "Show completed reminders"),
                 ("remind all", "Show every reminder"),
             ]
-        )
-        printSection(
-            title: "LISTS",
-            entries: [
+        ),
+        (
+            "LISTS",
+            [
                 ("remind lists", "Show all reminder lists"),
                 ("remind <list>", "Show reminders in a list"),
                 ("remind close <list>", "Archive a list"),
@@ -60,10 +58,10 @@ enum HelpRenderer {
                     "Remove completed reminders from a list"
                 ),
             ]
-        )
-        printSection(
-            title: "REMINDERS",
-            entries: [
+        ),
+        (
+            "REMINDERS",
+            [
                 ("remind add \"<title>\"", "Add a reminder"),
                 ("remind edit <id>", "Edit a reminder"),
                 (
@@ -75,25 +73,29 @@ enum HelpRenderer {
                     "Delete reminders (aliases: d, rm)"
                 ),
             ]
-        )
-        printSection(
-            title: "OUTPUT",
-            entries: [
+        ),
+        (
+            "OUTPUT",
+            [
                 ("--json", "Output as JSON"),
                 ("--plain", "Plain text without colors"),
                 ("--quiet", "Minimal output (count only)"),
             ]
-        )
-        printSection(
-            title: "MISC",
-            entries: [
+        ),
+        (
+            "MISC",
+            [
                 ("remind help", "Show this help screen"),
                 ("remind --version, -v", "Show version"),
             ]
-        )
-        printSection(
-            title: "EXAMPLES",
-            entries: [
+        ),
+        (
+            "EXAMPLES",
+            [
+                (
+                    "remind",
+                    "# today's reminders"
+                ),
                 (
                     "remind Work",
                     "# reminders in \"Work\""
@@ -111,15 +113,42 @@ enum HelpRenderer {
                     ""
                 ),
                 (
+                    "remind done",
+                    "# show completed"
+                ),
+                (
                     "remind done 1 2 3",
                     "# complete by id"
+                ),
+                (
+                    "remind delete 4A83",
+                    "# delete by partial id"
                 ),
                 (
                     "remind clean Work -y",
                     "# purge completed in \"Work\""
                 ),
             ]
-        )
+        ),
+    ]
+
+    static func render() {
+        let globalMaxWidth = calculateGlobalMaxWidth()
+        printBanner()
+        printBlank()
+        for (title, entries) in allSections {
+            printSection(
+                title: title,
+                entries: entries,
+                maxWidth: globalMaxWidth
+            )
+        }
+    }
+
+    private static func calculateGlobalMaxWidth() -> Int {
+        allSections
+            .flatMap { $0.1.map { $0.0.count } }
+            .max() ?? 0
     }
 
     private static func printBanner() {
@@ -133,13 +162,11 @@ enum HelpRenderer {
 
     private static func printSection(
         title: String,
-        entries: [(String, String)]
+        entries: [(String, String)],
+        maxWidth: Int
     ) {
         print("")
         print(title)
-        let maxWidth = entries
-            .map { $0.0.count }
-            .max() ?? 0
         for (invocation, description) in entries {
             let padding = String(
                 repeating: " ",
