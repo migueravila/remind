@@ -75,7 +75,6 @@ enum ArgDispatcher {
         "today",
         "tomorrow",
         "upcoming",
-        "flag",
         "done",
         "all",
     ]

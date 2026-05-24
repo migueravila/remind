@@ -127,15 +127,11 @@ public class Manager {
                         .map { $0 < calendar.startOfDay(for: now) } ??
                         false)
             }
-        case .tomorrow:
+         case .tomorrow:
             return allReminders.filter { reminder in
                 !reminder.isCompleted
                     && reminder.dueDate
                     .map { calendar.isDateInTomorrow($0) } ?? false
-            }
-        case .flagged:
-            return allReminders.filter {
-                !$0.isCompleted && $0.priority != .none
             }
         case .upcoming:
             return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }

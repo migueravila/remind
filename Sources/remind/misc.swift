@@ -41,7 +41,6 @@ enum HelpRenderer {
                 ("remind today", "Show today's reminders"),
                 ("remind tomorrow", "Show tomorrow's reminders"),
                 ("remind upcoming", "Show upcoming reminders"),
-                ("remind flag", "Show flagged reminders"),
                 ("remind done", "Show completed reminders"),
                 ("remind all", "Show every reminder"),
             ]
