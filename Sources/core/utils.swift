@@ -159,3 +159,78 @@ public enum IDResolver {
         return nil
     }
 }
+
+public func resolveList(
+    manager: Manager,
+    explicit: String?
+) async throws -> String? {
+    if let explicit { return explicit }
+
+    if case let .list(name) = ViewStateStore.load()?.spec {
+        return name
+    }
+
+    let config = Config.load()
+    if let defaultList = config.defaultList { return defaultList }
+
+    let available = try await manager.getAllLists()
+    guard !available.isEmpty else {
+        OutputUtils.printError("No lists available. Create a list first.")
+        return nil
+    }
+    let options = available.map { ($0.title, $0.title) }
+    return InputUtils.select(message: "Select a list:", options: options)
+}
+
+public func resolveReminderIDs(
+    _ inputs: [String],
+    listScope: String?,
+    examples: [String]
+) async throws -> (manager: Manager, ids: [String])? {
+    guard !inputs.isEmpty else {
+        OutputUtils
+            .printError("Please provide at least one reminder number or ID")
+        print("Examples:")
+        examples.forEach { print($0) }
+        return nil
+    }
+
+    let manager = Manager()
+    try await manager.requestAccess()
+    let reminders = try await manager.getReminders(from: listScope)
+
+    let validIDs: [String]
+    if listScope == nil, let state = ViewStateStore.load() {
+        validIDs = IDResolver.resolveIDs(
+            inputs,
+            snapshot: state.ids,
+            reminders: reminders
+        )
+    } else {
+        validIDs = IDResolver.resolveIDs(inputs, from: reminders)
+    }
+
+    guard !validIDs.isEmpty else {
+        OutputUtils.printError("No valid reminder numbers or IDs found")
+        print("Use a view command to see reminders with their numbers")
+        return nil
+    }
+
+    if validIDs.count < inputs.count {
+        OutputUtils.printWarning(
+            "Only \(validIDs.count) of \(inputs.count) inputs could be resolved"
+        )
+    }
+
+    return (manager, validIDs)
+}
+
+public func parsePriority(_ input: String?) -> Reminder.Priority {
+    guard let input = input?.lowercased() else { return .none }
+    switch input {
+    case "low", "l": return .low
+    case "medium", "med", "m": return .medium
+    case "high", "h": return .high
+    default: return .none
+    }
+}
