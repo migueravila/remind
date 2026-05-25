@@ -33,15 +33,19 @@ import Foundation
 
         let args = ArgDispatcher.rewrite(rawArgs)
         do {
-            let command = try parseAsRoot(args)
-            if var command = command as? AsyncParsableCommand {
-                try await command.run()
-            } else {
-                var command = command
-                try command.run()
-            }
+            try await runRoot(args: args)
         } catch {
             exit(withError: error)
+        }
+    }
+
+    private nonisolated static func runRoot(args: [String]) async throws {
+        let command = try parseAsRoot(args)
+        if var command = command as? AsyncParsableCommand {
+            try await command.run()
+        } else {
+            var command = command
+            try command.run()
         }
     }
 
