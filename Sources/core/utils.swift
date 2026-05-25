@@ -16,13 +16,6 @@ public enum DateUtils {
         }
     }()
 
-    private static let mediumFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }()
-
     public static func parseDate(_ dateString: String) -> Date? {
         for formatter in dateFormatters {
             if let date = formatter.date(from: dateString) {
@@ -75,10 +68,6 @@ public enum DateUtils {
         default:
             return parseDate(input) ?? parseSpecificDate(input)
         }
-    }
-
-    public static func formatDate(_ date: Date) -> String {
-        return mediumFormatter.string(from: date)
     }
 }
 

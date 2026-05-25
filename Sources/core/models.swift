@@ -77,7 +77,6 @@ public enum ProgramError: LocalizedError {
     case unknownAuthorizationStatus
     case reminderNotFound
     case listNotFound
-    case invalidDate
     case operationFailed(String)
 
     public var errorDescription: String? {
@@ -87,7 +86,6 @@ public enum ProgramError: LocalizedError {
         case .unknownAuthorizationStatus: "Unknown authorization status"
         case .reminderNotFound: "Reminder not found"
         case .listNotFound: "List not found"
-        case .invalidDate: "Invalid date format"
         case let .operationFailed(message):
             "Operation failed: \(message)"
         }
