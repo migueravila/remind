@@ -45,6 +45,7 @@ public enum HelpRenderer {
                 ("remind upcoming", "Show upcoming reminders"),
                 ("remind done", "Show completed reminders"),
                 ("remind all", "Show every reminder"),
+                ("remind <DD-MM-YY>", "Show reminders due on a date"),
             ]
         ),
         (
