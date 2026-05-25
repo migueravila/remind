@@ -24,9 +24,6 @@ public struct EditReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "New title")
     public var title: String?
 
-    @Option(name: .customLong("move-to"), help: "Move to a different list")
-    public var moveTo: String?
-
     @Option(name: .shortAndLong, help: "New due date")
     public var due: String?
 
@@ -35,12 +32,6 @@ public struct EditReminderCommand: AsyncParsableCommand {
 
     @Option(name: .shortAndLong, help: "New notes")
     public var notes: String?
-
-    @Flag(name: .shortAndLong, help: "Toggle flag (set flagged)")
-    public var flag: Bool = false
-
-    @Flag(name: .long, help: "Unset the flag")
-    public var unflag: Bool = false
 
     public init() {}
 
@@ -88,8 +79,8 @@ public struct EditReminderCommand: AsyncParsableCommand {
             return
         }
 
-        let hasFlags = title != nil || moveTo != nil || due != nil ||
-            priority != nil || notes != nil || flag || unflag
+        let hasFlags = title != nil || due != nil ||
+            priority != nil || notes != nil
 
         if hasFlags {
             try await runDirect(manager: manager, id: id)
@@ -103,18 +94,10 @@ public struct EditReminderCommand: AsyncParsableCommand {
     }
 
     private func runDirect(manager: Manager, id: String) async throws {
-        var parsedPriority: Reminder.Priority? = if let priority {
+        let parsedPriority: Reminder.Priority? = if let priority {
             parsePriority(priority)
         } else {
             nil
-        }
-
-        if parsedPriority == nil {
-            if unflag {
-                parsedPriority = Reminder.Priority.none
-            } else if flag {
-                parsedPriority = .high
-            }
         }
 
         let parsedDue: Date?? = if let due {
@@ -129,7 +112,7 @@ public struct EditReminderCommand: AsyncParsableCommand {
             notes: notes,
             priority: parsedPriority,
             dueDate: parsedDue,
-            listName: moveTo
+            listName: nil
         )
 
         OutputUtils.printSuccess("Updated reminder")

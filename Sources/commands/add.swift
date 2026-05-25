@@ -24,9 +24,6 @@ public struct AddReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Priority (none, low, medium, high)")
     public var priority: String?
 
-    @Flag(name: .shortAndLong, help: "Mark as flagged")
-    public var flag: Bool = false
-
     @Option(name: .shortAndLong, help: "Add notes")
     public var notes: String?
 
@@ -118,14 +115,7 @@ public struct AddReminderCommand: AsyncParsableCommand {
             nil
         }
 
-        let parsedPriority = parsePriority(priority)
-        let effectivePriority: Reminder.Priority = if priority != nil {
-            parsedPriority
-        } else if flag {
-            .high
-        } else {
-            .none
-        }
+        let effectivePriority: Reminder.Priority = parsePriority(priority)
 
         for title in titles {
             let reminder = Reminder(
