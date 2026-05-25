@@ -1,46 +1,64 @@
 name: release
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (X.Y.Z, e.g. 1.2.0)"
+        required: true
+        type: string
 
 jobs:
   release:
     runs-on: macos-14
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: validate-version
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must be in X.Y.Z format (got: ${{ inputs.version }})"
+            exit 1
+          fi
+
       - name: setup-xcode
         run: sudo xcode-select -s /Applications/Xcode_16.2.app
-      
+
+      - name: bump-version
+        run: make bump TO=${{ inputs.version }}
+
+      - name: commit-bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version Sources/commands/help.swift
+          if git diff --staged --quiet; then
+            echo "Version already at ${{ inputs.version }}, nothing to commit"
+          else
+            git commit -m "chore(config): bump version to ${{ inputs.version }}"
+            git push
+          fi
+
       - name: build
         run: swift build -c release
-      
+
       - name: build-package
         run: |
           mkdir release
           cp .build/release/remind release/
           cd release
-          tar -czf remind-macos.tar.gz remind
-          shasum -a 256 remind-macos.tar.gz > remind-macos.tar.gz.sha256
-      
-      - name: create-release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v1.0.${{ github.run_number }}
-          release_name: release v1.0.${{ github.run_number }}
-          body: "Release built from commit ${{ github.sha }}"
-      
-      - name: upload-binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release/remind-macos.tar.gz
-          asset_name: remind-macos.tar.gz
-          asset_content_type: application/gzip
+          tar -czf remind-${{ inputs.version }}-macos.tar.gz remind
+          shasum -a 256 remind-${{ inputs.version }}-macos.tar.gz > remind-${{ inputs.version }}-macos.tar.gz.sha256
 
+      - name: create-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v${{ inputs.version }} \
+            --title "release v${{ inputs.version }}" \
+            --notes "Release v${{ inputs.version }} built from commit $(git rev-parse HEAD)" \
+            --target master \
+            release/remind-${{ inputs.version }}-macos.tar.gz \
+            release/remind-${{ inputs.version }}-macos.tar.gz.sha256
