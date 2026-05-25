@@ -18,6 +18,9 @@ public struct DeleteReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Scope ID resolution to this list")
     public var list: String?
 
+    @Option(name: .long, help: "Scope ID resolution to this filter")
+    public var filter: String?
+
     @Flag(
         name: [.customShort("y"), .customLong("force")],
         help: "Skip confirmation prompt"
@@ -36,6 +39,7 @@ public struct DeleteReminderCommand: AsyncParsableCommand {
         guard let result = try await resolveReminderIDs(
             inputs,
             listScope: list,
+            filterScope: filter,
             examples: examples
         ) else {
             return

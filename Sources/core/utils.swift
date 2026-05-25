@@ -73,7 +73,7 @@ public enum DateUtils {
                 to: calendar.startOfDay(for: now)
             )
         default:
-            return parseDate(input)
+            return parseDate(input) ?? parseSpecificDate(input)
         }
     }
 
@@ -184,7 +184,8 @@ public func resolveList(
 
 public func resolveReminderIDs(
     _ inputs: [String],
-    listScope: String?,
+    listScope: String? = nil,
+    filterScope: String? = nil,
     examples: [String]
 ) async throws -> (manager: Manager, ids: [String])? {
     guard !inputs.isEmpty else {
@@ -195,12 +196,31 @@ public func resolveReminderIDs(
         return nil
     }
 
+    if listScope != nil, filterScope != nil {
+        OutputUtils.printError(
+            "--list and --filter cannot be combined"
+        )
+        return nil
+    }
+
     let manager = Manager()
     try await manager.requestAccess()
-    let reminders = try await manager.getReminders(from: listScope)
+
+    let reminders: [Reminder]
+    if let filterScope {
+        guard let options = parseFilter(filterScope) else {
+            OutputUtils.printError("Invalid filter: \(filterScope)")
+            return nil
+        }
+        reminders = try await manager.getReminders(filter: options)
+    } else {
+        reminders = try await manager.getReminders(from: listScope)
+    }
 
     let validIDs: [String]
-    if listScope == nil, let state = ViewStateStore.load() {
+    if listScope == nil, filterScope == nil,
+       let state = ViewStateStore.load()
+    {
         validIDs = IDResolver.resolveIDs(
             inputs,
             snapshot: state.ids,
@@ -223,6 +243,21 @@ public func resolveReminderIDs(
     }
 
     return (manager, validIDs)
+}
+
+public func parseFilter(_ input: String) -> ShowOptions? {
+    switch input.lowercased() {
+    case "today": return .today
+    case "tomorrow": return .tomorrow
+    case "upcoming": return .upcoming
+    case "done": return .completed
+    case "all": return .all
+    default:
+        if let date = DateUtils.parseSpecificDate(input) {
+            return .specificDate(date)
+        }
+        return nil
+    }
 }
 
 public func parsePriority(_ input: String?) -> Reminder.Priority {

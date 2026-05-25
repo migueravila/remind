@@ -55,7 +55,7 @@ public enum ArgDispatcher {
         }
 
         if filterVerbs.contains(head) {
-            return ["show", head] + rest
+            return rewriteFilterContext(filter: head, rest: rest)
         }
 
         if listVerbs.contains(head) {
@@ -63,7 +63,7 @@ public enum ArgDispatcher {
         }
 
         if DateUtils.parseSpecificDate(first) != nil {
-            return ["show", first] + rest
+            return rewriteFilterContext(filter: first, rest: rest)
         }
 
         if manipulatorVerbs.contains(head) || miscVerbs.contains(head) {
@@ -77,7 +77,50 @@ public enum ArgDispatcher {
         if rest.isEmpty {
             return ["show", "done"]
         }
+        let verb = rest[0].lowercased()
+        if manipulatorVerbs.contains(verb) {
+            return rewriteFilterContext(filter: "done", rest: rest)
+        }
         return ["complete"] + rest
+    }
+
+    private static func rewriteFilterContext(
+        filter: String,
+        rest: [String]
+    ) -> [String] {
+        if rest.isEmpty {
+            return ["show", filter]
+        }
+
+        let verb = rest[0].lowercased()
+        let after = Array(rest.dropFirst())
+
+        switch verb {
+        case "add", "a":
+            if filterMapsToDueDate(filter) {
+                return ["add", "--due", filter] + after
+            }
+            return ["add"] + after
+        case "done":
+            if after.isEmpty {
+                return ["show", filter]
+            }
+            return ["complete", "--filter", filter] + after
+        case "complete", "c":
+            return ["complete", "--filter", filter] + after
+        case "delete", "d", "rm":
+            return ["delete", "--filter", filter] + after
+        case "edit", "e":
+            return ["edit", "--filter", filter] + after
+        default:
+            return ["show", filter] + rest
+        }
+    }
+
+    private static func filterMapsToDueDate(_ filter: String) -> Bool {
+        let lower = filter.lowercased()
+        if lower == "today" || lower == "tomorrow" { return true }
+        return DateUtils.parseSpecificDate(filter) != nil
     }
 
     private static func rewriteListContext(

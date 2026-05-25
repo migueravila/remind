@@ -15,6 +15,12 @@ public struct EditReminderCommand: AsyncParsableCommand {
     @Option(name: .customLong("list"), help: "Scope ID resolution to this list")
     public var listScope: String?
 
+    @Option(
+        name: .customLong("filter"),
+        help: "Scope ID resolution to this filter"
+    )
+    public var filterScope: String?
+
     @Option(name: .shortAndLong, help: "New title")
     public var title: String?
 
@@ -39,12 +45,28 @@ public struct EditReminderCommand: AsyncParsableCommand {
     public init() {}
 
     public func run() async throws {
+        if listScope != nil, filterScope != nil {
+            OutputUtils.printError(
+                "--list and --filter cannot be combined"
+            )
+            return
+        }
+
         let manager = Manager()
         try await manager.requestAccess()
 
-        let reminders = try await manager.getReminders(from: listScope)
+        let reminders: [Reminder]
+        if let filterScope {
+            guard let options = parseFilter(filterScope) else {
+                OutputUtils.printError("Invalid filter: \(filterScope)")
+                return
+            }
+            reminders = try await manager.getReminders(filter: options)
+        } else {
+            reminders = try await manager.getReminders(from: listScope)
+        }
 
-        let resolved: [String] = if listScope == nil,
+        let resolved: [String] = if listScope == nil, filterScope == nil,
                                     let state = ViewStateStore.load()
         {
             IDResolver.resolveIDs(

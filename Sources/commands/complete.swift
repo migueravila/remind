@@ -18,6 +18,9 @@ public struct CompleteReminderCommand: AsyncParsableCommand {
     @Option(name: .shortAndLong, help: "Scope ID resolution to this list")
     public var list: String?
 
+    @Option(name: .long, help: "Scope ID resolution to this filter")
+    public var filter: String?
+
     public init() {}
 
     public func run() async throws {
@@ -30,6 +33,7 @@ public struct CompleteReminderCommand: AsyncParsableCommand {
         guard let result = try await resolveReminderIDs(
             inputs,
             listScope: list,
+            filterScope: filter,
             examples: examples
         ) else {
             return
