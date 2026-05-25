@@ -26,90 +26,181 @@ public enum HelpRenderer {
     private static let subtitle =
         "Apple Reminders for terminal natives  v\(version)"
 
-    private static let allSections: [(String, [(String, String)])] = [
-        (
-            "USAGE",
-            [
-                (
-                    "remind [list] [command] [arguments] [flags]",
-                    ""
-                )
-            ]
-        ),
-        (
+    private struct Section {
+        let title: String
+        let rows: [(String, String)]
+        let flags: [(String, String)]
+
+        init(
+            _ title: String,
+            rows: [(String, String)] = [],
+            flags: [(String, String)] = []
+        ) {
+            self.title = title
+            self.rows = rows
+            self.flags = flags
+        }
+    }
+
+    private static let sections: [Section] = [
+        Section("USAGE", rows: [
+            ("remind [list|filter] [command] [args] [flags]", ""),
+        ]),
+        Section(
             "FILTERS",
-            [
+            rows: [
                 ("remind", "Show today's reminders (default)"),
                 ("remind today", "Show today's reminders"),
                 ("remind tomorrow", "Show tomorrow's reminders"),
                 ("remind upcoming", "Show upcoming reminders"),
-                ("remind done", "Show completed reminders"),
-                ("remind all", "Show every reminder"),
+                ("remind all", "Show every active reminder"),
                 ("remind <DD-MM-YY>", "Show reminders due on a date"),
+            ],
+            flags: [
+                ("--done", "Show completed reminders for this filter"),
             ]
         ),
-        (
+        Section(
             "LISTS",
-            [
-                ("remind lists", "Show all reminder lists"),
+            rows: [
+                ("remind lists", "Show all reminder lists (alias: l)"),
                 ("remind <list>", "Show reminders in a list"),
-                ("remind close <list>", "Archive a list"),
                 ("remind rename <list> <name>", "Rename a list"),
                 (
-                    "remind clean <list>",
-                    "Remove completed reminders from a list"
+                    "remind archive <list>",
+                    "Delete a list and all its reminders"
                 ),
-            ]
-        ),
-        (
-            "REMINDERS",
-            [
-                ("remind add \"<title>\"", "Add a reminder"),
-                ("remind edit <id>", "Edit a reminder"),
+                ("remind clean <list>", "Delete every reminder in a list"),
                 (
-                    "remind complete <id...>",
-                    "Mark reminders complete (alias: done)"
+                    "remind purge [list]",
+                    "Delete completed reminders (one list or all)"
+                ),
+            ],
+            flags: [
+                ("--done", "Show completed items in a list"),
+                (
+                    "-y, --force",
+                    "Skip confirmation prompt (archive/clean/purge)"
+                ),
+            ]
+        ),
+        Section(
+            "ADD A REMINDER",
+            rows: [
+                ("remind add \"<title>\"", "Add a reminder (alias: a)"),
+                ("remind <list> add \"<title>\"", "Add to a specific list"),
+                ("remind today add \"<title>\"", "Add due today"),
+                ("remind tomorrow add \"<title>\"", "Add due tomorrow"),
+                ("remind <DD-MM-YY> add \"<title>\"", "Add due on a date"),
+                ("remind add", "Add interactively (prompts for fields)"),
+            ],
+            flags: [
+                ("-l, --list <name>", "Target list"),
+                (
+                    "-d, --due <date>",
+                    "Due date (DD-MM-YY, today, tomorrow, yesterday)"
                 ),
                 (
-                    "remind delete <id...>",
-                    "Delete reminders (aliases: d, rm)"
+                    "-p, --priority <level>",
+                    "Priority (none, low, medium, high)"
                 ),
+                ("-n, --notes <text>", "Attach notes"),
             ]
         ),
-        (
-            "OUTPUT",
-            [
-                ("--json", "Output as JSON"),
-                ("--plain", "Plain text without colors"),
-                ("--quiet", "Minimal output (count only)"),
+        Section(
+            "EDIT A REMINDER",
+            rows: [
+                (
+                    "remind edit <id>",
+                    "Edit a reminder (no flags = interactive)"
+                ),
+                ("remind <list> edit <id>", "Edit, scoping IDs to a list"),
+                ("remind today edit <id>", "Edit, scoping IDs to a filter"),
+            ],
+            flags: [
+                ("-l, --list <name>", "Scope ID resolution to a list"),
+                ("--filter <name>", "Scope ID resolution to a filter"),
+                ("-t, --title <text>", "New title"),
+                ("-d, --due <date>", "New due date"),
+                ("-p, --priority <level>", "New priority"),
+                ("-n, --notes <text>", "New notes"),
             ]
         ),
-        (
-            "MISC",
-            [
-                ("remind help", "Show this help screen"),
-                ("remind --version, -v", "Show version"),
+        Section(
+            "COMPLETE REMINDERS",
+            rows: [
+                ("remind done <id...>", "Mark reminders complete"),
+                (
+                    "remind <list> done <id...>",
+                    "Complete, scoping IDs to a list"
+                ),
+                (
+                    "remind today done <id...>",
+                    "Complete, scoping IDs to a filter"
+                ),
+            ],
+            flags: [
+                ("-l, --list <name>", "Scope ID resolution to a list"),
+                ("--filter <name>", "Scope ID resolution to a filter"),
             ]
         ),
+        Section(
+            "DELETE REMINDERS",
+            rows: [
+                ("remind delete <id...>", "Delete reminders (aliases: d, rm)"),
+                (
+                    "remind <list> delete <id...>",
+                    "Delete, scoping IDs to a list"
+                ),
+                (
+                    "remind today delete <id...>",
+                    "Delete, scoping IDs to a filter"
+                ),
+            ],
+            flags: [
+                ("-l, --list <name>", "Scope ID resolution to a list"),
+                ("--filter <name>", "Scope ID resolution to a filter"),
+                ("-y, --force", "Skip confirmation prompt"),
+            ]
+        ),
+        Section("OUTPUT FLAGS", flags: [
+            ("--json", "Output as JSON"),
+            ("--plain", "Plain text without colors"),
+            ("--quiet", "Minimal output (count only)"),
+        ]),
+        Section("MISC", rows: [
+            ("remind help", "Show this help screen"),
+            ("remind --version, -v", "Show version"),
+        ]),
     ]
 
+    private static let rowIndent = "  "
+    private static let flagIndent = "    "
+    private static let columnGap = "  "
+
     public static func render() {
-        let globalMaxWidth = calculateGlobalMaxWidth()
+        let descriptionColumn = computeDescriptionColumn()
         printBanner()
-        printBlank()
-        for (title, entries) in allSections {
-            printSection(
-                title: title,
-                entries: entries,
-                maxWidth: globalMaxWidth
-            )
+        for section in sections {
+            renderSection(section, descriptionColumn: descriptionColumn)
         }
     }
 
-    private static func calculateGlobalMaxWidth() -> Int {
-        allSections
-            .flatMap { $0.1.map { $0.0.count } }
-            .max() ?? 0
+    private static func computeDescriptionColumn() -> Int {
+        var maxLeft = 0
+        for section in sections {
+            for (invocation, description) in section.rows
+                where !description.isEmpty
+            {
+                maxLeft = max(maxLeft, rowIndent.count + invocation.count)
+            }
+            for (flag, description) in section.flags
+                where !description.isEmpty
+            {
+                maxLeft = max(maxLeft, flagIndent.count + flag.count)
+            }
+        }
+        return maxLeft
     }
 
     private static func printBanner() {
@@ -117,27 +208,42 @@ public enum HelpRenderer {
         print(subtitle)
     }
 
-    private static func printBlank() {
-        print("")
-    }
-
-    private static func printSection(
-        title: String,
-        entries: [(String, String)],
-        maxWidth: Int
+    private static func renderSection(
+        _ section: Section,
+        descriptionColumn: Int
     ) {
         print("")
-        print(title)
-        for (invocation, description) in entries {
-            let padding = String(
-                repeating: " ",
-                count: maxWidth - invocation.count
-            )
+        print(section.title)
+
+        for (invocation, description) in section.rows {
             if description.isEmpty {
-                print("  \(invocation)")
+                print("\(rowIndent)\(invocation)")
             } else {
-                print("  \(invocation)\(padding)   \(description)")
+                let used = rowIndent.count + invocation.count
+                let pad = String(
+                    repeating: " ",
+                    count: descriptionColumn - used
+                )
+                print(
+                    "\(rowIndent)\(invocation)\(pad)\(columnGap)\(description)"
+                )
             }
+        }
+
+        guard !section.flags.isEmpty else { return }
+        if !section.rows.isEmpty {
+            print("")
+            print("\(rowIndent)Flags:")
+        }
+
+        for (flag, description) in section.flags {
+            let indent = section.rows.isEmpty ? rowIndent : flagIndent
+            let used = indent.count + flag.count
+            let pad = String(
+                repeating: " ",
+                count: descriptionColumn - used
+            )
+            print("\(indent)\(flag)\(pad)\(columnGap)\(description)")
         }
     }
 }
