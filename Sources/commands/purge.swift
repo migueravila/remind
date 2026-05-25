@@ -2,14 +2,14 @@ import ArgumentParser
 import core
 import Foundation
 
-public struct CleanCommand: AsyncParsableCommand {
+public struct PurgeCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
-        commandName: "clean",
-        abstract: "Delete every reminder in a list (keeps the list itself)"
+        commandName: "purge",
+        abstract: "Delete completed reminders (in a list or across all lists)"
     )
 
-    @Argument(help: "List name to clean")
-    public var name: String
+    @Argument(help: "List name to purge (omit for all lists)")
+    public var name: String?
 
     @Flag(
         name: [.customShort("y"), .customLong("force")],
@@ -23,16 +23,19 @@ public struct CleanCommand: AsyncParsableCommand {
         let manager = Manager()
         try await manager.requestAccess()
 
-        let reminders = try await manager.getReminders(from: name)
-        guard !reminders.isEmpty else {
-            OutputUtils.printInfo("List '\(name)' is already empty")
+        let all = try await manager.getReminders(from: name)
+        let completed = all.filter(\.isCompleted)
+
+        guard !completed.isEmpty else {
+            OutputUtils.printInfo("No completed reminders to purge")
             return
         }
 
+        let scope = name.map { "in list '\($0)'" } ?? "across all lists"
         let shouldConfirm = !force && Config.load().confirmDelete
         if shouldConfirm {
             let ok = InputUtils.confirm(
-                message: "Delete all \(reminders.count) reminder(s) in '\(name)'?",
+                message: "Delete \(completed.count) completed reminder(s) \(scope)?",
                 defaultValue: false
             )
             guard ok else {
@@ -41,10 +44,9 @@ public struct CleanCommand: AsyncParsableCommand {
             }
         }
 
-        let ids = reminders.compactMap(\.id)
-        try await manager.deleteReminders(ids: ids)
+        let deleted = try await manager.purgeCompleted(in: name)
         OutputUtils.printSuccess(
-            "Cleaned \(ids.count) reminder(s) from '\(name)'"
+            "Purged \(deleted) completed reminder(s)"
         )
     }
 }

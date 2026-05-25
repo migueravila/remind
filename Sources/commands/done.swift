@@ -2,11 +2,10 @@ import ArgumentParser
 import core
 import Foundation
 
-public struct CompleteReminderCommand: AsyncParsableCommand {
+public struct DoneReminderCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
-        commandName: "complete",
-        abstract: "Mark one or more reminders as complete",
-        aliases: ["c"]
+        commandName: "done",
+        abstract: "Mark one or more reminders as complete"
     )
 
     @Argument(

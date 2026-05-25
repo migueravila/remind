@@ -2,13 +2,13 @@ import ArgumentParser
 import core
 import Foundation
 
-public struct CloseCommand: AsyncParsableCommand {
+public struct ArchiveCommand: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
-        commandName: "close",
-        abstract: "Close (delete) a list and all its reminders"
+        commandName: "archive",
+        abstract: "Archive (delete) a list and all its reminders"
     )
 
-    @Argument(help: "List name to close")
+    @Argument(help: "List name to archive")
     public var name: String
 
     @Flag(
@@ -26,7 +26,7 @@ public struct CloseCommand: AsyncParsableCommand {
         let shouldConfirm = !force && Config.load().confirmDelete
         if shouldConfirm {
             let ok = InputUtils.confirm(
-                message: "Close list '\(name)' and delete all its reminders?",
+                message: "Archive list '\(name)' and delete all its reminders?",
                 defaultValue: false
             )
             guard ok else {
@@ -36,6 +36,6 @@ public struct CloseCommand: AsyncParsableCommand {
         }
 
         try await manager.deleteList(name: name)
-        OutputUtils.printSuccess("Closed list: \(name)")
+        OutputUtils.printSuccess("Archived list: \(name)")
     }
 }

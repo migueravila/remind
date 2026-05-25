@@ -250,7 +250,6 @@ public func parseFilter(_ input: String) -> ShowOptions? {
     case "today": return .today
     case "tomorrow": return .tomorrow
     case "upcoming": return .upcoming
-    case "done": return .completed
     case "all": return .all
     default:
         if let date = DateUtils.parseSpecificDate(input) {

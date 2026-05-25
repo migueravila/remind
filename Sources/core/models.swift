@@ -98,7 +98,6 @@ public enum ShowOptions: Sendable, Equatable {
     case today
     case tomorrow
     case upcoming
-    case completed
     case all
     case specificDate(Date)
 }
@@ -112,7 +111,6 @@ public enum ViewSpec: Sendable, Codable, Equatable {
         case today
         case tomorrow
         case upcoming
-        case completed
         case all
         case specificDate(Date)
     }

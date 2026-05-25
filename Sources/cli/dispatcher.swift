@@ -6,7 +6,6 @@ public enum ArgDispatcher {
         "today",
         "tomorrow",
         "upcoming",
-        "done",
         "all",
     ]
 
@@ -17,11 +16,12 @@ public enum ArgDispatcher {
     public static let manipulatorVerbs: Set<String> = [
         "add", "a",
         "edit", "e",
-        "complete", "c",
+        "done",
         "delete", "d", "rm",
-        "close",
+        "archive",
         "rename",
         "clean",
+        "purge",
     ]
 
     public static let miscVerbs: Set<String> = [
@@ -50,10 +50,6 @@ public enum ArgDispatcher {
 
         if head == "version" { return ["--version"] }
 
-        if head == "done" {
-            return rewriteDone(rest: rest)
-        }
-
         if filterVerbs.contains(head) {
             return rewriteFilterContext(filter: head, rest: rest)
         }
@@ -71,17 +67,6 @@ public enum ArgDispatcher {
         }
 
         return rewriteListContext(listName: first, rest: rest)
-    }
-
-    private static func rewriteDone(rest: [String]) -> [String] {
-        if rest.isEmpty {
-            return ["show", "done"]
-        }
-        let verb = rest[0].lowercased()
-        if manipulatorVerbs.contains(verb) {
-            return rewriteFilterContext(filter: "done", rest: rest)
-        }
-        return ["complete"] + rest
     }
 
     private static func rewriteFilterContext(
@@ -102,12 +87,7 @@ public enum ArgDispatcher {
             }
             return ["add"] + after
         case "done":
-            if after.isEmpty {
-                return ["show", filter]
-            }
-            return ["complete", "--filter", filter] + after
-        case "complete", "c":
-            return ["complete", "--filter", filter] + after
+            return ["done", "--filter", filter] + after
         case "delete", "d", "rm":
             return ["delete", "--filter", filter] + after
         case "edit", "e":
@@ -138,12 +118,7 @@ public enum ArgDispatcher {
         case "add", "a":
             return ["add", "--list", listName] + after
         case "done":
-            if after.isEmpty {
-                return ["show", "--list", listName, "--completed"]
-            }
-            return ["complete", "--list", listName] + after
-        case "complete", "c":
-            return ["complete", "--list", listName] + after
+            return ["done", "--list", listName] + after
         case "delete", "d", "rm":
             return ["delete", "--list", listName] + after
         case "edit", "e":

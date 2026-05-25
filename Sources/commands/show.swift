@@ -12,15 +12,15 @@ public struct ShowCommand: AsyncParsableCommand {
 
     @Argument(
         parsing: .remaining,
-        help: "Filter (today, tomorrow, upcoming, done, all, or DD-MM-YY)"
+        help: "Filter (today, tomorrow, upcoming, all, or DD-MM-YY)"
     )
     public var timeFilter: [String] = []
 
     @Option(name: .shortAndLong, help: "Show reminders from this list")
     public var list: String?
 
-    @Flag(name: .long, help: "Show completed reminders (used with --list)")
-    public var completed: Bool = false
+    @Flag(name: .long, help: "Show completed reminders")
+    public var done: Bool = false
 
     @OptionGroup public var output: OutputOptions
 
@@ -39,7 +39,10 @@ public struct ShowCommand: AsyncParsableCommand {
         }
 
         let filter = parseTimeFilter(timeFilter)
-        let reminders = try await manager.getReminders(filter: filter)
+        let reminders = try await manager.getReminders(
+            filter: filter,
+            showCompleted: done
+        )
         let sorted = OutputUtils.sortReminders(reminders)
         OutputUtils.printReminders(reminders, format: output.format)
         persistFilterState(filter: filter, reminders: sorted)
@@ -75,7 +78,7 @@ public struct ShowCommand: AsyncParsableCommand {
         }
 
         let all = try await manager.getReminders(from: listName)
-        let filtered = completed
+        let filtered = done
             ? all.filter(\.isCompleted)
             : all.filter { !$0.isCompleted }
         let sorted = OutputUtils.sortReminders(filtered)
@@ -91,7 +94,6 @@ public struct ShowCommand: AsyncParsableCommand {
         case "today": return .today
         case "tomorrow": return .tomorrow
         case "upcoming": return .upcoming
-        case "done": return .completed
         case "all": return .all
         default:
             if let date = DateUtils.parseSpecificDate(firstArg) {
@@ -122,7 +124,6 @@ public struct ShowCommand: AsyncParsableCommand {
         case .today: .today
         case .tomorrow: .tomorrow
         case .upcoming: .upcoming
-        case .completed: .completed
         case .all: .all
         case let .specificDate(date): .specificDate(date)
         }
