@@ -5,7 +5,7 @@ let package = Package(
     name: "remind",
     platforms: [.macOS(.v13)],
     products: [
-        .executable(name: "remind", targets: ["remind"])
+        .executable(name: "remind", targets: ["app"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
@@ -18,13 +18,32 @@ let package = Package(
                 .product(name: "Yams", package: "Yams")
             ]
         ),
-        .executableTarget(
-            name: "remind",
+        .target(
+            name: "cli",
             dependencies: [
                 "core",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]
+        ),
+        .target(
+            name: "commands",
+            dependencies: [
+                "core",
+                "cli",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ]
+        ),
+        .executableTarget(
+            name: "app",
+            dependencies: [
+                "core",
+                "cli",
+                "commands",
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ],
+            path: "Sources",
+            exclude: ["core", "cli", "commands"],
+            sources: ["app.swift"]
         )
     ]
 )
-
