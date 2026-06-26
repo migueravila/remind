@@ -377,10 +377,10 @@ public enum OutputUtils {
             components.append(red("⚑"))
         }
 
-        let infoText = components.joined(separator: " \(bullet) ")
+        let infoText = components.joined(separator: " ")
 
         print(
-            "\(paddedTitle) \(statusIcon) \(dim(shortId)) \(bullet) \(infoText)"
+            "\(paddedTitle) \(statusIcon) \(dim(shortId)) \(infoText)"
         )
     }
 
