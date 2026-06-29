@@ -1,3 +1,4 @@
+import CoreGraphics
 import EventKit
 import Foundation
 
@@ -37,15 +38,26 @@ public class Manager {
         return lists
     }
 
-    public func createList(name: String) async throws -> ReminderList {
+    public func createList(
+        name: String,
+        color: ListColor? = nil
+    ) async throws -> ReminderList {
         let calendar = EKCalendar(for: .reminder, eventStore: eventStore)
         calendar.title = name
         calendar.source = eventStore.defaultCalendarForNewReminders()?.source
+
+        if let color {
+            let (r, g, b) = color.rgb
+            calendar.cgColor = CGColor(
+                red: r, green: g, blue: b, alpha: 1.0
+            )
+        }
 
         try eventStore.saveCalendar(calendar, commit: true)
 
         return ReminderList(
             id: calendar.calendarIdentifier, title: calendar.title,
+            color: calendar.cgColor?.components?.description,
             reminderCount: 0
         )
     }
