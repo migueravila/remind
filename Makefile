@@ -1,9 +1,9 @@
-.PHONY: build test install uninstall clean format lint release dev help
+.PHONY: build test install uninstall clean format lint release dev bump help
 
 BINARY_NAME = remind
 BUILD_PATH = .build/release/$(BINARY_NAME)
 INSTALL_PATH = /usr/local/bin/$(BINARY_NAME)
-VERSION ?= 1.0.0
+VERSION ?= $(shell cat version 2>/dev/null || echo "0.0.0")
 
 build:
 	swift build -c release
@@ -49,6 +49,16 @@ release: clean build
 dev: format lint test build
 	@echo "Development workflow complete"
 
+bump:
+	@if [ -z "$(TO)" ]; then \
+		echo "Usage: make bump TO=1.2.0"; \
+		exit 1; \
+	fi
+	@echo "$(TO)" > version
+	@sed -i.bak 's/public static let version = ".*"/public static let version = "$(TO)"/' Sources/commands/help.swift
+	@rm -f Sources/commands/help.swift.bak
+	@echo "Bumped to $(TO)"
+
 help:
 	@echo "Available commands:"
 	@echo "  build     - Build release binary"
@@ -60,8 +70,10 @@ help:
 	@echo "  uninstall - Remove binary"
 	@echo "  release   - Create release package"
 	@echo "  dev       - Run development workflow"
+	@echo "  bump      - Bump version (updates version file + Swift constant)"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make dev                    # Full workflow"
-	@echo "  make release VERSION=2.0.0 # Custom version"
+	@echo "  make dev                # Full workflow"
+	@echo "  make bump TO=1.2.0      # Bump version to 1.2.0"
+	@echo "  make release            # Use version from ./version"
 

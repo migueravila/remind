@@ -1,9 +1,10 @@
 import ArgumentParser
+import cli
 import core
 import Foundation
 
-struct ShowCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
+public struct ShowCommand: AsyncParsableCommand {
+    public static let configuration = CommandConfiguration(
         commandName: "show",
         abstract: "Show reminders based on filter or list",
         shouldDisplay: false
@@ -11,19 +12,21 @@ struct ShowCommand: AsyncParsableCommand {
 
     @Argument(
         parsing: .remaining,
-        help: "Filter (today, tomorrow, upcoming, done, all, or DD-MM-YY)"
+        help: "Filter (today, tomorrow, upcoming, all, or DD-MM-YY)"
     )
-    var timeFilter: [String] = []
+    public var timeFilter: [String] = []
 
     @Option(name: .shortAndLong, help: "Show reminders from this list")
-    var list: String?
+    public var list: String?
 
-    @Flag(name: .long, help: "Show completed reminders (used with --list)")
-    var completed: Bool = false
+    @Flag(name: .long, help: "Show completed reminders")
+    public var done: Bool = false
 
-    @OptionGroup var output: OutputOptions
+    @OptionGroup public var output: OutputOptions
 
-    func run() async throws {
+    public init() {}
+
+    public func run() async throws {
         let manager = Manager()
         try await manager.requestAccess()
 
@@ -36,7 +39,10 @@ struct ShowCommand: AsyncParsableCommand {
         }
 
         let filter = parseTimeFilter(timeFilter)
-        let reminders = try await manager.getReminders(filter: filter)
+        let reminders = try await manager.getReminders(
+            filter: filter,
+            showCompleted: done
+        )
         let sorted = OutputUtils.sortReminders(reminders)
         OutputUtils.printReminders(reminders, format: output.format)
         persistFilterState(filter: filter, reminders: sorted)
@@ -66,13 +72,26 @@ struct ShowCommand: AsyncParsableCommand {
                 return
             }
 
-            let created = try await manager.createList(name: listName)
+            let color = InputUtils.select(
+                message: "Choose a color for '\(listName)'",
+                options: ListColor.allCases.map { color in
+                    (
+                        "\(OutputUtils.swatch(for: color)) \(color.displayName)",
+                        color
+                    )
+                }
+            )
+
+            let created = try await manager.createList(
+                name: listName,
+                color: color
+            )
             OutputUtils.printSuccess("Created list: \(created.title)")
             return
         }
 
         let all = try await manager.getReminders(from: listName)
-        let filtered = completed
+        let filtered = done
             ? all.filter(\.isCompleted)
             : all.filter { !$0.isCompleted }
         let sorted = OutputUtils.sortReminders(filtered)
@@ -88,7 +107,6 @@ struct ShowCommand: AsyncParsableCommand {
         case "today": return .today
         case "tomorrow": return .tomorrow
         case "upcoming": return .upcoming
-        case "done": return .completed
         case "all": return .all
         default:
             if let date = DateUtils.parseSpecificDate(firstArg) {
@@ -119,32 +137,8 @@ struct ShowCommand: AsyncParsableCommand {
         case .today: .today
         case .tomorrow: .tomorrow
         case .upcoming: .upcoming
-        case .completed: .completed
         case .all: .all
         case let .specificDate(date): .specificDate(date)
         }
-    }
-}
-
-struct ListsCommand: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        commandName: "lists",
-        abstract: "Show all reminder lists"
-    )
-
-    @OptionGroup var output: OutputOptions
-
-    func run() async throws {
-        let manager = Manager()
-        try await manager.requestAccess()
-
-        let lists = try await manager.getAllLists()
-        let reminders = try await manager.getReminders(from: nil)
-        OutputUtils.printLists(
-            lists,
-            reminders: reminders,
-            format: output.format
-        )
-        ViewStateStore.save(ViewState(spec: .lists, ids: []))
     }
 }

@@ -72,12 +72,37 @@ public struct ReminderList: Sendable, Codable {
     }
 }
 
+public enum ListColor: String, CaseIterable, Sendable {
+    case red
+    case orange
+    case yellow
+    case green
+    case blue
+    case purple
+    case brown
+
+    public var displayName: String {
+        rawValue.capitalized
+    }
+
+    public var rgb: (red: Double, green: Double, blue: Double) {
+        switch self {
+        case .red: (1.0, 0.231, 0.188)
+        case .orange: (1.0, 0.584, 0.0)
+        case .yellow: (1.0, 0.8, 0.0)
+        case .green: (0.204, 0.780, 0.349)
+        case .blue: (0.0, 0.478, 1.0)
+        case .purple: (0.686, 0.322, 0.871)
+        case .brown: (0.635, 0.518, 0.369)
+        }
+    }
+}
+
 public enum ProgramError: LocalizedError {
     case accessDenied
     case unknownAuthorizationStatus
     case reminderNotFound
     case listNotFound
-    case invalidDate
     case operationFailed(String)
 
     public var errorDescription: String? {
@@ -87,7 +112,6 @@ public enum ProgramError: LocalizedError {
         case .unknownAuthorizationStatus: "Unknown authorization status"
         case .reminderNotFound: "Reminder not found"
         case .listNotFound: "List not found"
-        case .invalidDate: "Invalid date format"
         case let .operationFailed(message):
             "Operation failed: \(message)"
         }
@@ -98,7 +122,6 @@ public enum ShowOptions: Sendable, Equatable {
     case today
     case tomorrow
     case upcoming
-    case completed
     case all
     case specificDate(Date)
 }
@@ -112,7 +135,6 @@ public enum ViewSpec: Sendable, Codable, Equatable {
         case today
         case tomorrow
         case upcoming
-        case completed
         case all
         case specificDate(Date)
     }

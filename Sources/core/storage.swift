@@ -3,25 +3,21 @@ import Yams
 
 public struct Config: Codable, Sendable {
     public var defaultList: String?
-    public var dateFormat: String?
     public var color: String?
     public var confirmDelete: Bool
 
     public init(
         defaultList: String? = nil,
-        dateFormat: String? = nil,
         color: String? = nil,
         confirmDelete: Bool = true
     ) {
         self.defaultList = defaultList
-        self.dateFormat = dateFormat
         self.color = color
         self.confirmDelete = confirmDelete
     }
 
     enum CodingKeys: String, CodingKey {
         case defaultList = "default_list"
-        case dateFormat = "date_format"
         case color
         case confirmDelete = "confirm_delete"
     }
@@ -57,7 +53,6 @@ public struct Config: Codable, Sendable {
 
     private mutating func merge(with other: Config) {
         if let value = other.defaultList { defaultList = value }
-        if let value = other.dateFormat { dateFormat = value }
         if let value = other.color { color = value }
         confirmDelete = other.confirmDelete
     }
@@ -68,21 +63,8 @@ public struct Config: Codable, Sendable {
         {
             defaultList = value
         }
-        if let value = ProcessInfo.processInfo
-            .environment["REMIND_DATE_FORMAT"]
-        {
-            dateFormat = value
-        }
         if let value = ProcessInfo.processInfo.environment["REMIND_COLOR"] {
             color = value
-        }
-    }
-
-    public var shouldUseColors: Bool {
-        switch color?.lowercased() {
-        case "always": return true
-        case "never": return false
-        default: return isatty(STDOUT_FILENO) == 1
         }
     }
 }
@@ -116,10 +98,5 @@ public enum ViewStateStore {
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(state) else { return }
         try? data.write(to: url, options: .atomic)
-    }
-
-    public static func clear() {
-        let url = stateURL
-        try? FileManager.default.removeItem(at: url)
     }
 }

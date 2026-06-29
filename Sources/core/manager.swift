@@ -1,3 +1,4 @@
+import CoreGraphics
 import EventKit
 import Foundation
 
@@ -37,15 +38,26 @@ public class Manager {
         return lists
     }
 
-    public func createList(name: String) async throws -> ReminderList {
+    public func createList(
+        name: String,
+        color: ListColor? = nil
+    ) async throws -> ReminderList {
         let calendar = EKCalendar(for: .reminder, eventStore: eventStore)
         calendar.title = name
         calendar.source = eventStore.defaultCalendarForNewReminders()?.source
+
+        if let color {
+            let (r, g, b) = color.rgb
+            calendar.cgColor = CGColor(
+                red: r, green: g, blue: b, alpha: 1.0
+            )
+        }
 
         try eventStore.saveCalendar(calendar, commit: true)
 
         return ReminderList(
             id: calendar.calendarIdentifier, title: calendar.title,
+            color: calendar.cgColor?.components?.description,
             reminderCount: 0
         )
     }
@@ -111,15 +123,21 @@ public class Manager {
         }
     }
 
-    public func getReminders(filter: ShowOptions) async throws -> [Reminder] {
+    public func getReminders(
+        filter: ShowOptions,
+        showCompleted: Bool = false
+    ) async throws -> [Reminder] {
         let allReminders = try await getReminders(from: nil)
         let calendar = Calendar.current
         let now = Date()
+        let statusMatch: (Reminder) -> Bool = { reminder in
+            showCompleted ? reminder.isCompleted : !reminder.isCompleted
+        }
 
         switch filter {
         case .today:
             return allReminders.filter { reminder in
-                !reminder.isCompleted
+                statusMatch(reminder)
                     &&
                     (reminder.dueDate
                         .map { calendar.isDateInToday($0) } ?? false
@@ -129,23 +147,21 @@ public class Manager {
             }
         case .tomorrow:
             return allReminders.filter { reminder in
-                !reminder.isCompleted
+                statusMatch(reminder)
                     && reminder.dueDate
                     .map { calendar.isDateInTomorrow($0) } ?? false
             }
         case .upcoming:
-            return allReminders.filter { !$0.isCompleted && $0.dueDate != nil }
+            return allReminders.filter { statusMatch($0) && $0.dueDate != nil }
                 .sorted {
                     ($0.dueDate ?? Date.distantFuture) <
                         ($1.dueDate ?? Date.distantFuture)
                 }
-        case .completed:
-            return allReminders.filter(\.isCompleted)
         case .all:
-            return allReminders.filter { !$0.isCompleted }
+            return allReminders.filter(statusMatch)
         case let .specificDate(date):
             return allReminders.filter { reminder in
-                !reminder.isCompleted
+                statusMatch(reminder)
                     && reminder.dueDate.map { calendar.isDate(
                         $0,
                         inSameDayAs: date
@@ -345,7 +361,7 @@ public class Manager {
         }
     }
 
-    public func cleanCompleted(in listName: String? = nil) async throws -> Int {
+    public func purgeCompleted(in listName: String? = nil) async throws -> Int {
         let calendars: [EKCalendar]
         if let listName {
             calendars = eventStore.calendars(for: .reminder).filter {
@@ -379,7 +395,7 @@ public class Manager {
                     if failedCount > 0 {
                         continuation
                             .resume(throwing: ProgramError.operationFailed(
-                                "Failed to clean \(failedCount) reminder(s)"
+                                "Failed to purge \(failedCount) reminder(s)"
                             ))
                     } else {
                         continuation.resume(returning: deletedCount)

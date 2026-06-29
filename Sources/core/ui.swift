@@ -1,7 +1,6 @@
 import Foundation
 
 enum Constants {
-    static let maxNotesPreviewLength = 30
     static let maxAmbiguousMatches = 5
     static let minPrefixLength = 3
     static let bufferSize = 3
@@ -11,12 +10,6 @@ enum Constants {
     static let warningIcon = "⚠"
     static let infoIcon = "ℹ"
     static let promptIcon = "➤"
-
-    static let bullet = "›"
-    static let arrow = "›"
-    static let dash = "-"
-    static let star = "*"
-    static let plus = "+"
 }
 
 enum Terminal {
@@ -97,6 +90,14 @@ public enum OutputUtils {
 
     public static func magenta(_ text: String) -> String {
         return "\(Color.magenta)\(text)\(Color.reset)"
+    }
+
+    public static func swatch(for color: ListColor) -> String {
+        let (r, g, b) = color.rgb
+        let red = Int((r * 255).rounded())
+        let green = Int((g * 255).rounded())
+        let blue = Int((b * 255).rounded())
+        return "\u{001B}[38;2;\(red);\(green);\(blue)m●\(Color.reset)"
     }
 
     public static func printSuccess(_ message: String) {
