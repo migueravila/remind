@@ -72,7 +72,20 @@ public struct ShowCommand: AsyncParsableCommand {
                 return
             }
 
-            let created = try await manager.createList(name: listName)
+            let color = InputUtils.select(
+                message: "Choose a color for '\(listName)'",
+                options: ListColor.allCases.map { color in
+                    (
+                        "\(OutputUtils.swatch(for: color)) \(color.displayName)",
+                        color
+                    )
+                }
+            )
+
+            let created = try await manager.createList(
+                name: listName,
+                color: color
+            )
             OutputUtils.printSuccess("Created list: \(created.title)")
             return
         }
