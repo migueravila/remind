@@ -12,6 +12,7 @@ import Foundation
             ShowCommand.self,
             ListsCommand.self,
             AddReminderCommand.self,
+            QuickCommand.self,
             EditReminderCommand.self,
             DoneReminderCommand.self,
             DeleteReminderCommand.self,

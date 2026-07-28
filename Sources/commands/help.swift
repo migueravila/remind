@@ -108,6 +108,27 @@ public enum HelpRenderer {
             ]
         ),
         Section(
+            "QUICK ADD",
+            rows: [
+                (
+                    "remind quick \"<title>\" [@list] [!|!!|!!!] [date]",
+                    "Add a reminder in one line (alias: q)"
+                ),
+                (
+                    "remind quick \"Sample task\" @admin !!! tomorrow",
+                    "High priority, due tomorrow, in 'admin'"
+                ),
+            ],
+            flags: [
+                ("@<list>", "Target list"),
+                ("! | !! | !!!", "Priority (low, medium, high)"),
+                (
+                    "<date>",
+                    "Due date (today, tomorrow, weekend, YYYY-MM-DD)"
+                ),
+            ]
+        ),
+        Section(
             "EDIT A REMINDER",
             rows: [
                 (

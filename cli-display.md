@@ -11,10 +11,10 @@ How `remind` turns a list of records into aligned, colored rows in the terminal 
 A listing is one record per line. Every line is the same ordered sequence of fixed-position fields, so the eye reads each column straight down. Color encodes meaning; alignment comes from padding, not from separators.
 
 ```ansi
-Unify CLI UIs                       [31m○[0m [2m4273[0m [34madmin[0m [33m!medium[0m [31msaturday[0m [31m⚑[0m
+Unify CLI UIs                       [31m○[0m [2m4273[0m [34madmin[0m [33m!medium[0m [31msaturday[0m [33m⚑[0m
 Update project packages             ○ [2m96BA[0m [34mwork [0m [33m!high  [0m tuesday [31m⚑[0m
-Start new mosaic project            ○ [2m8125[0m [34mhome [0m [33m!none  [0m sunday
-Cancel Gym                          [32m✓[0m [2m7779[0m [34madmin[0m [33m!none  [0m [2mno date[0m
+Start new mosaic project            ○ [2m8125[0m [34mhome [0m [33m!none  [0m sunday [2m⚑[0m
+Cancel Gym                          [32m✓[0m [2m7779[0m [34madmin[0m [33m!none  [0m [2mno date[0m [2m⚑[0m
 ```
 
 Reading left to right, each row is built from these segments, joined by a **single space**:
@@ -27,7 +27,7 @@ Reading left to right, each row is built from these segments, joined by a **sing
 | **List** | measured | `blue` | padded to the widest list name in the current view |
 | **Priority** | measured | `yellow` | padded to the widest priority label present |
 | **Due date** | natural | `red` if overdue | humanized; `dim` when absent (`no date`) |
-| **Markers** | natural | `dim` note · `red` ⚑ | optional, appended only when present |
+| **Markers** | natural | `dim` note · priority ⚑ | note only when present; ⚑ always, colored by priority (`dim` none · `green` low · `yellow` medium · `red` high) |
 
 Padded fields (title, list, priority) carry the alignment, so they come first. Variable, optional fields (date, markers) trail at the end where ragged width does no harm.
 
@@ -108,7 +108,7 @@ A tiny fixed vocabulary of single-width marks. Pair each with color so the meani
 | Glyph | Use |
 | --- | --- |
 | `○` `✓` | row status: open / complete |
-| `⚑` | flagged |
+| `⚑` | priority (`dim` none · `green` low · `yellow` medium · `red` high) |
 | `✔` `✗` `⚠` `ℹ` | feedback lines: success / error / warning / info |
 | `➤` | interactive prompt |
 
