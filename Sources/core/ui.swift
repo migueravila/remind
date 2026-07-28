@@ -374,15 +374,24 @@ public enum OutputUtils {
             components.append(dim("* note"))
         }
 
-        if reminder.isFlagged {
-            components.append(red("⚑"))
-        }
+        components.append(priorityFlag(for: reminder.priority))
 
         let infoText = components.joined(separator: " ")
 
         print(
             "\(paddedTitle) \(statusIcon) \(dim(shortId)) \(infoText)"
         )
+    }
+
+    private static func priorityFlag(
+        for priority: Reminder.Priority
+    ) -> String {
+        switch priority {
+        case .none: dim("⚑")
+        case .low: green("⚑")
+        case .medium: yellow("⚑")
+        case .high: red("⚑")
+        }
     }
 
     private static func formatDateForDisplay(_ date: Date) -> String {
