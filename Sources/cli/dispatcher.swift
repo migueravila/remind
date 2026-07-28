@@ -15,6 +15,7 @@ public enum ArgDispatcher {
 
     public static let manipulatorVerbs: Set<String> = [
         "add", "a",
+        "quick", "q",
         "edit", "e",
         "done",
         "delete", "d", "rm",
